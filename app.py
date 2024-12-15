@@ -11,8 +11,11 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_openai import ChatOpenAI
 
-st.set_page_config(page_title="SDLC Automate APP")  
-st.set_page_config(page_icon="/images/favicon.png") 
+st.set_page_config(
+    page_title="SDLC Automate APP",
+    page_icon="/images/favicon.png",
+    layout="centered"  # Optional: Can be "centered" or "wide"
+)
 
 # Get the API key from Streamlit secrets
 OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
