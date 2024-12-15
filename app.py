@@ -11,9 +11,6 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_openai import ChatOpenAI
 
-# Set API key
-os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
-
 # Streamlit sidebar setup
 with st.sidebar:
     st.title("Your BRD Documents")
