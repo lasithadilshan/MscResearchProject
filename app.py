@@ -10,7 +10,6 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_openai import ChatOpenAI
-from app_secret import OPENAI_API_KEY
 
 # Set API key
 os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
