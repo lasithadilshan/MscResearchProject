@@ -11,6 +11,8 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_openai import ChatOpenAI
 
+st.set_page_config(page_title="SDLC Automate APP")  
+
 # Get the API key from Streamlit secrets
 OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
 
