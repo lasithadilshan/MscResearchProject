@@ -1,116 +1,171 @@
-Here's a sample `README.md` file for your Travel Buddy Chatbot application:
+# BRD to User Story, Test Case, Cucumber Script, and Selenium Script Generator
+
+## Overview
+
+This application is a Streamlit-based tool designed to assist users in generating user stories, test cases, Cucumber scripts, and Selenium scripts from uploaded Business Requirement Document (BRD) files. It uses the LangChain framework and OpenAI's GPT-4 model to automate the extraction and generation of actionable development and testing artifacts.
 
 ---
 
-# BRD to User Story Converting App - Generative AI RAG Application
-
-This project is a **Generative AI-based BRD to User Story Converting App** that uses Retrieval-Augmented Generation (RAG) to provide tips based on information from various file formats (PDF, DOCX, PPTX, Excel). It uses **LangChain**, **OpenAI's GPT model**, and **FAISS** for handling natural language queries and retrieving relevant information.
-
 ## Features
-- Upload and process files like PDFs, Word documents, PowerPoints, Excel spreadsheets, and plain text files.
-- Retrieve travel-related information from embedded text.
-- Answer travel-related questions using OpenAI's GPT model.
-- Simple user interface built with **Streamlit**.
 
-## Folder Structure
-- `data/file_folder/`: Place your documents (PDF, DOCX, PPTX, XLSX, TXT) here for processing.
-- `app_secret.py`: Contains your **OpenAI API Key**.
-- `requirements.txt`: Contains all necessary libraries to run the application.
+### 1. **File Upload and Text Extraction**
 
-## Requirements
+- Supports file formats: `.pdf`, `.docx`, `.txt`, `.xlsx`, and `.pptx`.
+- Extracts text from uploaded files using specialized parsers.
 
-Install the required Python packages from the `requirements.txt` file. Here's the list:
+### 2. **User Story Generation**
 
-```
-streamlit==1.24.0
-PyPDF2==3.0.1
-python-docx==0.8.11
-python-pptx==0.6.21
-pandas==2.1.1
-openai
-langchain
-langchain_openai
-faiss-cpu==1.8.0
-langchain-community
-langchain-core
-```
+- Converts the extracted BRD content into user stories using GPT-4.
+- Employs a vector store for efficient retrieval and relevance-based processing.
 
-## Prerequisites
+### 3. **User Story to Test Case Conversion**
 
-1. **Python 3.8+** installed.
-2. An **OpenAI API Key** for using the GPT model. You can sign up for an API key at [OpenAI](https://beta.openai.com/signup/).
+- Generates comprehensive test cases from user stories, covering functional and edge scenarios.
+
+### 4. **Test Case to Cucumber Script Conversion**
+
+- Converts test cases into Gherkin syntax scripts for automated testing.
+
+### 5. **Test Case to Selenium Script Conversion**
+
+- Generates Python Selenium scripts for automated web testing based on test cases.
+
+---
 
 ## Installation
 
-### 1. Clone the repository:
+### Prerequisites
 
-```bash
-git clone https://git.virtusa.com/team-i/backend/-/tree/hackathon
-cd chatapp
+- Python 3.9 or higher
+- Virtual environment (optional but recommended)
+
+### Steps
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/lasithadilshan/MscResearchProject.git
+   cd MscResearchProject
+   ```
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. Create a `.env` or `app_secret.py` file with your OpenAI API key:
+   ```python
+   OPENAI_API_KEY = "your_openai_api_key"
+   ```
+4. Run the application:
+   ```bash
+   streamlit run <application_file_name>.py
+   ```
+
+---
+
+## Usage
+
+### Uploading a File
+
+1. Upload a file via the sidebar.
+2. Supported formats: `.pdf`, `.docx`, `.txt`, `.xlsx`, `.pptx`.
+
+### Generating User Stories
+
+1. Navigate to the **User Story Generation** tab.
+2. View the generated user stories based on the uploaded BRD.
+
+### Converting User Stories to Test Cases
+
+1. Navigate to the **User Story to Test Case** tab.
+2. Enter the user story text and click **Generate Test Cases**.
+
+### Converting Test Cases to Cucumber Scripts
+
+1. Navigate to the **Test Case to Cucumber Script** tab.
+2. Enter the test case text and click **Generate Cucumber Script**.
+
+### Converting Test Cases to Selenium Scripts
+
+1. Navigate to the **Test Case to Selenium Script** tab.
+2. Enter the test case text and click **Generate Selenium Script**.
+
+---
+
+## Dependencies
+
+| Package             | Version |
+| ------------------- | ------- |
+| streamlit           | 1.38.0  |
+| PyPDF2              | 3.0.1   |
+| python-docx         | 0.8.11  |
+| python-pptx         | 0.6.21  |
+| pandas              | 2.1.1   |
+| openai              | latest  |
+| langchain           | latest  |
+| langchain-openai    | latest  |
+| faiss-cpu           | 1.8.0   |
+| langchain-community | 0.3.0   |
+| langchain-core      | 0.3.5   |
+| scikit-learn        | latest  |
+| openpyxl            | latest  |
+
+---
+
+## Project Structure
+
+```
+.
+├── app_secret.py          # Contains OpenAI API Key
+├── requirements.txt       # Dependencies
+├── main.py                # Application entry point
+└── README.md              # Project documentation
 ```
 
-### 2. Install the required dependencies:
+---
 
-Make sure you are in the root of your project directory, then run:
+## Caching
 
-```bash
-python -m pip install -r requirements.txt
-```
+To optimize performance:
 
-### 3. Set up your OpenAI API Key:
+- **Resource-heavy operations** such as file parsing, vector store creation, and text extraction are cached using Streamlit's `@st.cache_resource`.
 
-Create a file called `app_secret.py` in the root directory with the following content:
+---
 
-```python
-OPENAI_API_KEY = "your-openai-api-key-here"
-```
+## Notes
 
-Replace `"your-openai-api-key-here"` with your actual OpenAI API key.
+- Ensure the OpenAI API key is valid and has sufficient quota.
+- Execution times for large files may vary depending on file size and complexity.
+- Adjust the `chunk_size` and `chunk_overlap` parameters in the text splitter for fine-tuning.
 
-### 4. Add your files for processing:
-
-Place your documents (PDF, DOCX, PPTX, Excel, etc.) inside the `data/file_folder` directory.
-
-### 5. Run the Streamlit Application:
-
-Start the application with the following command:
-
-```bash
-streamlit run app.py
-```
-
-```
-python -m streamlit run E:\MscFinalProjects\mscProj\app.py
-```
-
-### 6. Interact with the chatbot:
-
-Once the Streamlit server is up, open your web browser and navigate to `http://localhost:8501/`. Here you can input travel-related queries, and the chatbot will provide answers based on the processed documents.
-
-## How It Works
-
-1. **Document Upload & Processing**: The app reads documents (PDF, DOCX, PPTX, XLSX, TXT) from the `data/file_folder` directory and extracts text.
-2. **Text Splitting**: Extracted text is split into smaller chunks using LangChain's `RecursiveCharacterTextSplitter`.
-3. **Embedding**: Each chunk is embedded into vectors using OpenAI's `Embeddings`.
-4. **Vector Store**: FAISS is used to store the vector embeddings for quick retrieval based on user queries.
-5. **Query Input**: Users input travel-related questions.
-6. **Answer Generation**: The chatbot retrieves the most relevant information from the vector store and uses OpenAI’s GPT model to generate responses.
-
-
+---
 
 ## Troubleshooting
 
-- If the chatbot does not respond, ensure that the documents are correctly placed in the `data/file_folder` and that they contain travel-related information.
-- Make sure your OpenAI API key is valid and correctly set in `app_secret.py`.
-- Double-check that all dependencies are installed correctly by reviewing the `requirements.txt`.
+### Common Issues
+
+1. **Missing or invalid OpenAI API Key**:
+   - Ensure the API key is set correctly in `app_secret.py` or `.venv` file.
+2. **Dependency errors**:
+   - Run `pip install -r requirements.txt` again to ensure all dependencies are installed.
+3. **File parsing errors**:
+   - Verify the file format is supported and the file is not corrupted.
 
 ---
 
-## Contact
+## Future Enhancements
 
-For any issues or questions, feel free to reach out via `dilshantilakaratne29@gmail.com`. 
-
+- Add support for additional file formats.
+- Improve text extraction for more complex document structures.
+- Enable multi-language support for user story generation.
+- Integrate other LLM models for expanded capabilities.
 
 ---
 
-This `README.md` file provides an overview of the project, installation steps, instructions on how to run the application, and contact details.
+## License
+
+This project is open-source and available under the [MIT License](https://opensource.org/licenses/MIT).
+
+---
+
+## Contributors
+
+- Lasitha Thilakarathna - Developer
