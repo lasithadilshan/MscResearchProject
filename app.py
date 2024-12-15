@@ -13,7 +13,7 @@ from langchain_openai import ChatOpenAI
 
 st.set_page_config(
     page_title="SDLC Automate APP",
-    page_icon="/images/favicon.png"
+    page_icon="images/favicon.png"
 )
 
 # Get the API key from Streamlit secrets
