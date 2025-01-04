@@ -22,7 +22,7 @@ hide_st_style = """
             #MainMenu {visibility: hidden;}
             footer {visibility: hidden;}
             header {visibility: hidden;}
-            .st-emotion-cache-1v0mbdj {display: none;}  /* Hides "Hosted with Streamlit" */
+            ._viewerBadge_nim44_23 {display: none;}  /* Hides "Hosted with Streamlit" */
             </style>
             """
 st.markdown(hide_st_style, unsafe_allow_html=True)
