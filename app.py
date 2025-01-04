@@ -22,7 +22,7 @@ hide_st_style = """
             #MainMenu {visibility: hidden;}
             footer {visibility: hidden;}
             header {visibility: hidden;}
-            ._viewerBadge_nim44_23 {display: none;}  /* Hides "Hosted with Streamlit" */
+            ._terminalButton_rix23_138 {display: none;}  /* Hides "Manage App Button" */
             </style>
             """
 st.markdown(hide_st_style, unsafe_allow_html=True)
