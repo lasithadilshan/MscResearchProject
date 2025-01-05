@@ -22,7 +22,7 @@ hide_streamlit_style = """
     #MainMenu {visibility: hidden;} /* Hides the "Manage app" menu */
     footer {visibility: hidden;} /* Hides the Streamlit footer */
     header {visibility: hidden;} /* Hides the header */
-    .st-emotion-cache-1v0mbdj {display: none;} /* Hides "Hosted with Streamlit" */
+    ._link_gzau3_10 {display: none;} /* Hides "Hosted with Streamlit" */
     .stDeployButton {display: none !important;} /* Hides the deploy button */
     </style>
 """
