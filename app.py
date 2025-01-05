@@ -16,13 +16,16 @@ st.set_page_config(
     page_icon="images/favicon.png"
 )
 
-# --- HIDE STREAMLIT BRANDING ---
+# Hide Streamlit branding, menu, and footer
 hide_streamlit_style = """
-            <style>
-            #MainMenu {visibility: hidden;}
-            footer {visibility: hidden;}
-            </style>
-            """
+    <style>
+    #MainMenu {visibility: hidden;} /* Hides the "Manage app" menu */
+    footer {visibility: hidden;} /* Hides the Streamlit footer */
+    header {visibility: hidden;} /* Hides the header */
+    .st-emotion-cache-1v0mbdj {display: none;} /* Hides "Hosted with Streamlit" */
+    .stDeployButton {display: none !important;} /* Hides the deploy button */
+    </style>
+"""
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 # Get the API key from Streamlit secrets
