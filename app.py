@@ -17,15 +17,13 @@ st.set_page_config(
 )
 
 # --- HIDE STREAMLIT BRANDING ---
-hide_st_style = """
+hide_streamlit_style = """
             <style>
             #MainMenu {visibility: hidden;}
             footer {visibility: hidden;}
-            header {visibility: hidden;}
-            ._terminalButton_rix23_138 {display: none;}  /* Hides "Manage App Button" */
             </style>
             """
-st.markdown(hide_st_style, unsafe_allow_html=True)
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 # Get the API key from Streamlit secrets
 OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
