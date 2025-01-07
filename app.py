@@ -160,7 +160,7 @@ with tab3:
         if test_case_text:
             cucumber_prompt = (
                     "Think of yourself as a test automation engineer. Your task is to convert the following test case into a Cucumber "
-                    "script using Gherkin syntax. Make sure to include all scenarios with Given, When, Then steps as applicable. "
+                    "script using Gherkin syntax and the Step definition file with the Java language. Make sure to include all scenarios with Given, When, Then steps as applicable. "
                     "Here is the test case: \n\n" + test_case_text
             )
             start_cucumber_time = time.time()
