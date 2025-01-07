@@ -114,8 +114,7 @@ with tab1:
             matches = vector_store.similarity_search(prompt_message, k=3)  # Retrieve top 3 similar texts
             llm = ChatOpenAI(
                 openai_api_key=OPENAI_API_KEY,
-                temperature=0.9,
-                max_tokens=500,
+                temperature=0.1,
                 model_name="gpt-4o"
             )
             qa_chain = RetrievalQA.from_chain_type(
@@ -161,6 +160,7 @@ with tab3:
             cucumber_prompt = (
                     "Think of yourself as a test automation engineer. Your task is to convert the following test case into a Cucumber "
                     "script using Gherkin syntax and the Step definition file with the Java language. Make sure to include all scenarios with Given, When, Then steps as applicable. "
+                    "Make sure to give fully complete feature file and fully complete step definition Java code."
                     "Here is the test case: \n\n" + test_case_text
             )
             start_cucumber_time = time.time()
