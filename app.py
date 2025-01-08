@@ -109,6 +109,7 @@ with tab1:
                 "Think of yourself as a senior business analyst. Your responsibility is to read the Business Requirement Document "
                 "and write the User Stories according to that BRD. Think step-by-step and write all possible user stories "
                 "for the Business Requirement Document."
+                "Make sure to give fully complete user stories."
             )
             start_query_time = time.time()
             matches = vector_store.similarity_search(prompt_message, k=3)  # Retrieve top 3 similar texts
