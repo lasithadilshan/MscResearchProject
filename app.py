@@ -182,6 +182,7 @@ with tab4:
             selenium_prompt = (
                     "Assume you are a test automation engineer specializing in Selenium. Your task is to convert the following test case "
                     "into a Selenium WebDriver script using Python. Ensure to include all steps to perform the actions in the test case, "
+                    "Make sure to give fully complete selenium full code."
                     "such as locating elements, interacting with the web page, and validating outcomes. Here is the test case: \n\n" + selenium_test_case_text
             )
             start_selenium_time = time.time()
