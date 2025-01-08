@@ -142,6 +142,7 @@ with tab2:
             test_case_prompt = (
                     "Think of yourself as a senior QA engineer. Your responsibility is to read the user story provided and generate "
                     "all possible test cases. Think in a structured way, covering functional and edge cases where applicable. "
+                    "Make sure to give fully complete test cases."
                     "Here is the user story: \n\n" + user_story_text
             )
             start_test_case_time = time.time()
