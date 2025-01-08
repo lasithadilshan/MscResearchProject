@@ -124,16 +124,7 @@ with tab1:
                 retriever=vector_store.as_retriever()
             )
             response = qa_chain.invoke({"query": prompt_message})
-            user_story = response['result']
-
-            # Display the generated User Story
-            st.write(user_story)
-
-            # Add a Copy to Clipboard button
-            st.code(user_story, language="markdown")  # Display it in a code block
-            if st.button("Copy User Story"):
-                pyperclip.copy(user_story)
-                st.success("User Story copied to clipboard!")
+            st.write(response['result'])
 
             # Display timing info for performance insights
             st.write(f"Document loading time: {time.time() - start_time:.2f} seconds")
