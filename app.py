@@ -171,12 +171,15 @@ with tab3:
 
     if st.button("Generate Cucumber Script"):
         if test_case_text:
-            cucumber_prompt = (
-                    "Think of yourself as a test automation engineer. Your task is to convert the following test case into a Cucumber "
-                    "script using Gherkin syntax and the Step definition file with the Java language. Make sure to include all scenarios with Given, When, Then steps as applicable. "
-                    "Make sure to give fully complete feature file and fully complete step definition Java code."
-                    "Here is the test case: \n\n" + test_case_text
-            )
+                cucumber_prompt = (
+                    "You are a test automation engineer tasked with creating a Cucumber test suite for the following test case: \n\n" + test_case_text + 
+                    "\n\n**Objectives:**" + 
+                    "\n* **Develop** a comprehensive Cucumber feature file using Gherkin syntax." + 
+                    "\n* **Create** corresponding Java step definitions for each Gherkin step." + 
+                    "\n* **Ensure** all scenarios are defined with Given, When, and Then steps as appropriate." + 
+                    "\n* **Focus** on producing clean, readable, and maintainable code." + 
+                    "\n* **Deliver** both the complete feature file and the complete Java step definition file."
+                )
             start_cucumber_time = time.time()
             response = qa_chain.invoke({"query": cucumber_prompt})
             st.write(response['result'])
