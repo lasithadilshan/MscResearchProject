@@ -106,13 +106,20 @@ with tab1:
         if text:
             vector_store = create_vector_store(text)
             prompt_message = (
-                "Imagine you are a Senior Business Analyst. "
-                "Your responsibility is to read the entire Business Requirement Document (BRD) "
-                "and convert it into detailed User Stories. "
-                "Think step-by-step and ensure you write all possible User Stories derived from the BRD." 
-                "Provide fully complete User Stories only, "
-                "without any additional explanation or sentences."
-                "give only user stories with the standard format of writing user stories"
+            """     You are a Senior Business Analyst tasked with analyzing a comprehensive Business Requirement Document (BRD).
+
+                    Your objective:
+                    
+                    Transform the entire BRD into a collection of detailed User Stories.
+                    Employ a systematic, step-by-step approach to ensure all potential User Stories are identified.
+                    Deliver only complete User Stories adhering to the following standard format:
+                    As a [User Role],
+                    I want [Functionality],
+                    so that [Benefit].
+                    Deliverables:
+                    
+                    Provide a list of User Stories exclusively in the specified format.
+                    Omit any supplementary explanations, sentences, or contextual information. """
             )
             start_query_time = time.time()
             matches = vector_store.similarity_search(prompt_message, k=3)  # Retrieve top 3 similar texts
