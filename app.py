@@ -150,10 +150,12 @@ with tab2:
     if st.button("Generate Test Cases"):
         if user_story_text:
             test_case_prompt = (
-                    "Think of yourself as a senior QA engineer. Your responsibility is to read the user story provided and generate "
-                    "all possible test cases. Think in a structured way, covering functional and edge cases where applicable. "
-                    "Make sure to give fully complete test cases."
-                    "Here is the user story: \n\n" + user_story_text
+                "You are a senior QA engineer. Your responsibility is to design a comprehensive test suite for the following user story: \n\n" + user_story_text + 
+                "\n\n**Objectives:**" + 
+                "\n* **Develop** a set of test cases that cover all aspects of the user story functionality." + 
+                "\n* **Consider** both functional and edge case scenarios." + 
+                "\n* **Ensure** test cases are presented in a clear and concise manner." + 
+                "\n* **Focus** solely on the test cases themselves, omitting any additional explanations or context." 
             )
             start_test_case_time = time.time()
             response = qa_chain.invoke({"query": test_case_prompt})
