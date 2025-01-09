@@ -106,10 +106,13 @@ with tab1:
         if text:
             vector_store = create_vector_store(text)
             prompt_message = (
-                "Think of yourself as a senior business analyst. Your responsibility is to read the Business Requirement Document "
-                "and write the User Stories according to that BRD. Think step-by-step and write all possible user stories "
-                "for the Business Requirement Document."
-                "Make sure to give fully complete user stories."
+                "Imagine you are a Senior Business Analyst. "
+                "Your responsibility is to read the entire Business Requirement Document (BRD) "
+                "and convert it into detailed User Stories. "
+                "Think step-by-step and ensure you write all possible User Stories derived from the BRD." 
+                "Provide fully complete User Stories only, "
+                "without any additional explanation or sentences."
+                "give only user stories with the standard format of writing user stories"
             )
             start_query_time = time.time()
             matches = vector_store.similarity_search(prompt_message, k=3)  # Retrieve top 3 similar texts
