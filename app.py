@@ -95,6 +95,9 @@ def create_vector_store(text):
 # Streamlit app setup
 st.header("BRD to User Story, Test Case, Cucumber Script, and Selenium Script")
 
+# Initialize qa_chain as None
+qa_chain = None
+
 # Set up tabs for different functionalities
 tab1, tab2, tab3, tab4 = st.tabs(["User Story Generation", "User Story to Test Case", "Test Case to Cucumber Script", "Test Case to Selenium Script"])
 
@@ -106,19 +109,13 @@ with tab1:
         if text:
             vector_store = create_vector_store(text)
             prompt_message = (
-            """ Imagine you are a Senior Business Analyst. "
-
-                "Your responsibility is to read the entire Business Requirement Document (BRD) "
-
-                "and convert it into detailed User Stories. "
-
-                "Think step-by-step and ensure you write all possible User Stories derived from the BRD." 
-
-                "Provide fully complete User Stories only, "
-
-                "without any additional explanation or sentences."
-
-                "give only user stories with the standard format of writing user stories """
+                """Imagine you are a Senior Business Analyst. "
+                "Your responsibility is to read the entire Business Requirement Document (BRD) "
+                "and convert it into detailed User Stories. "
+                "Think step-by-step and ensure you write all possible User Stories derived from the BRD." 
+                "Provide fully complete User Stories only, "
+                "without any additional explanation or sentences."
+                "give only user stories with the standard format of writing user stories"""
             )
             start_query_time = time.time()
             matches = vector_store.similarity_search(prompt_message, k=3)  # Retrieve top 3 similar texts
@@ -148,6 +145,18 @@ with tab2:
 
     if st.button("Generate Test Cases"):
         if user_story_text:
+            if qa_chain is None:
+                # Create a basic QA chain if not already created
+                llm = ChatOpenAI(
+                    openai_api_key=OPENAI_API_KEY,
+                    temperature=0.1,
+                    model_name="gpt-4o"
+                )
+                qa_chain = RetrievalQA.from_chain_type(
+                    llm=llm,
+                    chain_type="stuff"
+                )
+            
             test_case_prompt = (
                 "You are a senior QA engineer. Your responsibility is to design a comprehensive test suite for the following user story: \n\n" + user_story_text + 
                 "\n\n**Objectives:**" + 
@@ -170,6 +179,18 @@ with tab3:
 
     if st.button("Generate Cucumber Script"):
         if test_case_text:
+            if qa_chain is None:
+                # Create a basic QA chain if not already created
+                llm = ChatOpenAI(
+                    openai_api_key=OPENAI_API_KEY,
+                    temperature=0.1,
+                    model_name="gpt-4o"
+                )
+                qa_chain = RetrievalQA.from_chain_type(
+                    llm=llm,
+                    chain_type="stuff"
+                )
+            
             cucumber_prompt = (
                 "You are a test automation engineer tasked with creating a Cucumber test suite for the following test case: \n\n" + test_case_text + 
                 "\n\n**Objectives:**" + 
@@ -193,6 +214,18 @@ with tab4:
 
     if st.button("Generate Selenium Script"):
         if selenium_test_case_text:
+            if qa_chain is None:
+                # Create a basic QA chain if not already created
+                llm = ChatOpenAI(
+                    openai_api_key=OPENAI_API_KEY,
+                    temperature=0.1,
+                    model_name="gpt-4o"
+                )
+                qa_chain = RetrievalQA.from_chain_type(
+                    llm=llm,
+                    chain_type="stuff"
+                )
+            
             selenium_prompt = (
                     "Assume you are a test automation engineer specializing in Selenium. Your task is to convert the following test case "
                     "into a Selenium WebDriver script using Python. Ensure to include all steps to perform the actions in the test case, "
