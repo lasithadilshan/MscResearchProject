@@ -9,7 +9,7 @@ langchain-openai==0.0.8
 faiss-cpu==1.8.0
 langchain-community==0.0.29
 langchain-core==0.1.33
-scikit-learn==1.4.1.post1
+scikit-learn==1.5.1
 openpyxl==3.1.2
 tiktoken==0.6.0
 pydantic==2.6.4
