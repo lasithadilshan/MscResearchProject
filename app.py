@@ -10,14 +10,16 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_openai import ChatOpenAI
+from openai import OpenAIError
 
 # Ensure ChatOpenAI is fully defined
-ChatOpenAI.model_rebuild()
+try:
+    ChatOpenAI.model_rebuild()
+except Exception as e:
+    st.error(f"Failed to reconstruct ChatOpenAI model: {e}")
 
-st.set_page_config(
-    page_title="SDLC Automate APP",
-    page_icon="images/favicon.png"
-)
+# Streamlit page configuration
+st.set_page_config(page_title="SDLC Automate APP", page_icon="images/favicon.png")
 
 # Hide Streamlit branding, menu, and footer
 hide_streamlit_style = """
@@ -32,7 +34,9 @@ hide_streamlit_style = """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 # Get the API key from Streamlit secrets
-OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+OPENAI_API_KEY = st.secrets.get("OPENAI_API_KEY")
+if not OPENAI_API_KEY:
+    st.error("OpenAI API Key not found. Please configure the key in Streamlit secrets.")
 
 # Streamlit sidebar setup
 with st.sidebar:
@@ -46,28 +50,23 @@ def extract_text_from_file(file):
     text = ""
     file_ext = os.path.splitext(file.name)[1].lower()
 
-    # Handle PDF files
     if file_ext == ".pdf":
         pdf_reader = PdfReader(file)
         for page in pdf_reader.pages:
             text += page.extract_text()
 
-    # Handle Word (.docx) files
     elif file_ext == ".docx":
         doc = Document(file)
         for para in doc.paragraphs:
             text += para.text + "\n"
 
-    # Handle text (.txt) files
     elif file_ext == ".txt":
         text = file.read().decode("utf-8")
 
-    # Handle Excel files (.xlsx, .xls)
     elif file_ext in [".xlsx", ".xls"]:
         df = pd.read_excel(file)
         text = df.to_string()
 
-    # Handle PowerPoint files (.pptx, .ppt)
     elif file_ext in [".pptx", ".ppt"]:
         ppt = pptx.Presentation(file)
         for slide in ppt.slides:
@@ -109,34 +108,31 @@ with tab1:
         if text:
             vector_store = create_vector_store(text)
             prompt_message = (
-            """ Imagine you are a Senior Business Analyst. "
-
-                "Your responsibility is to read the entire Business Requirement Document (BRD) "
-
-                "and convert it into detailed User Stories. "
-
-                "Think step-by-step and ensure you write all possible User Stories derived from the BRD." 
-
-                "Provide fully complete User Stories only, "
-
-                "without any additional explanation or sentences."
-
-                "give only user stories with the standard format of writing user stories """
+                """Imagine you are a Senior Business Analyst. 
+                Your responsibility is to read the entire Business Requirement Document (BRD) 
+                and convert it into detailed User Stories. 
+                Think step-by-step and ensure you write all possible User Stories derived from the BRD.
+                Provide fully complete User Stories only, 
+                without any additional explanation or sentences.
+                give only user stories with the standard format of writing user stories."""
             )
-            start_query_time = time.time()
-            matches = vector_store.similarity_search(prompt_message, k=3)  # Retrieve top 3 similar texts
-            llm = ChatOpenAI(
-                openai_api_key=OPENAI_API_KEY,
-                temperature=0.1,
-                model_name="gpt-4o"
-            )
-            qa_chain = RetrievalQA.from_chain_type(
-                llm=llm,
-                chain_type="stuff",
-                retriever=vector_store.as_retriever()
-            )
-            response = qa_chain.invoke({"query": prompt_message})
-            st.write(response['result'])
+            try:
+                start_query_time = time.time()
+                matches = vector_store.similarity_search(prompt_message, k=3)  # Retrieve top 3 similar texts
+                llm = ChatOpenAI(
+                    openai_api_key=OPENAI_API_KEY,
+                    temperature=0.1,
+                    model_name="gpt-4o"
+                )
+                qa_chain = RetrievalQA.from_chain_type(
+                    llm=llm,
+                    chain_type="stuff",
+                    retriever=vector_store.as_retriever()
+                )
+                response = qa_chain.invoke({"query": prompt_message})
+                st.write(response['result'])
+            except OpenAIError as e:
+                st.error(f"An error occurred while processing the AI model: {e}")
 
             # Display timing info for performance insights
             st.write(f"Document loading time: {time.time() - start_time:.2f} seconds")
@@ -152,17 +148,21 @@ with tab2:
     if st.button("Generate Test Cases"):
         if user_story_text:
             test_case_prompt = (
-                "You are a senior QA engineer. Your responsibility is to design a comprehensive test suite for the following user story: \n\n" + user_story_text + 
-                "\n\n**Objectives:**" + 
-                "\n* **Develop** a set of test cases that cover all aspects of the user story functionality." + 
-                "\n* **Consider** both functional and edge case scenarios." + 
-                "\n* **Ensure** test cases are presented in a clear and concise manner." + 
-                "\n* **Focus** solely on the test cases themselves, omitting any additional explanations or context." 
+                "You are a senior QA engineer. Your responsibility is to design a comprehensive test suite for the following user story: \n\n" +
+                user_story_text +
+                "\n\n**Objectives:**" +
+                "\n* **Develop** a set of test cases that cover all aspects of the user story functionality." +
+                "\n* **Consider** both functional and edge case scenarios." +
+                "\n* **Ensure** test cases are presented in a clear and concise manner." +
+                "\n* **Focus** solely on the test cases themselves, omitting any additional explanations or context."
             )
-            start_test_case_time = time.time()
-            response = qa_chain.invoke({"query": test_case_prompt})
-            st.write(response['result'])
-            st.write(f"Test case generation time: {time.time() - start_test_case_time:.2f} seconds")
+            try:
+                start_test_case_time = time.time()
+                response = qa_chain.invoke({"query": test_case_prompt})
+                st.write(response['result'])
+                st.write(f"Test case generation time: {time.time() - start_test_case_time:.2f} seconds")
+            except OpenAIError as e:
+                st.error(f"An error occurred while generating test cases: {e}")
         else:
             st.write("Please enter a user story to generate test cases.")
 
@@ -174,18 +174,22 @@ with tab3:
     if st.button("Generate Cucumber Script"):
         if test_case_text:
             cucumber_prompt = (
-                "You are a test automation engineer tasked with creating a Cucumber test suite for the following test case: \n\n" + test_case_text + 
-                "\n\n**Objectives:**" + 
-                "\n* **Develop** a comprehensive Cucumber feature file using Gherkin syntax." + 
-                "\n* **Create** corresponding Java step definitions for each Gherkin step." + 
-                "\n* **Ensure** all scenarios are defined with Given, When, and Then steps as appropriate." + 
-                "\n* **Focus** on producing clean, readable, and maintainable code." + 
+                "You are a test automation engineer tasked with creating a Cucumber test suite for the following test case: \n\n" +
+                test_case_text +
+                "\n\n**Objectives:**" +
+                "\n* **Develop** a comprehensive Cucumber feature file using Gherkin syntax." +
+                "\n* **Create** corresponding Java step definitions for each Gherkin step." +
+                "\n* **Ensure** all scenarios are defined with Given, When, and Then steps as appropriate." +
+                "\n* **Focus** on producing clean, readable, and maintainable code." +
                 "\n* **Deliver** both the complete feature file and the complete Java step definition file."
             )
-            start_cucumber_time = time.time()
-            response = qa_chain.invoke({"query": cucumber_prompt})
-            st.write(response['result'])
-            st.write(f"Cucumber script generation time: {time.time() - start_cucumber_time:.2f} seconds")
+            try:
+                start_cucumber_time = time.time()
+                response = qa_chain.invoke({"query": cucumber_prompt})
+                st.write(response['result'])
+                st.write(f"Cucumber script generation time: {time.time() - start_cucumber_time:.2f} seconds")
+            except OpenAIError as e:
+                st.error(f"An error occurred while generating the Cucumber script: {e}")
         else:
             st.write("Please enter a test case to generate a Cucumber script.")
 
@@ -197,14 +201,17 @@ with tab4:
     if st.button("Generate Selenium Script"):
         if selenium_test_case_text:
             selenium_prompt = (
-                    "Assume you are a test automation engineer specializing in Selenium. Your task is to convert the following test case "
-                    "into a Selenium WebDriver script using Python. Ensure to include all steps to perform the actions in the test case, "
-                    "Make sure to give fully complete selenium full code."
-                    "such as locating elements, interacting with the web page, and validating outcomes. Here is the test case: \n\n" + selenium_test_case_text
+                "Assume you are a test automation engineer specializing in Selenium. Your task is to convert the following test case "
+                "into a Selenium WebDriver script using Python. Ensure to include all steps to perform the actions in the test case, "
+                "Make sure to give fully complete selenium full code."
+                "such as locating elements, interacting with the web page, and validating outcomes. Here is the test case: \n\n" + selenium_test_case_text
             )
-            start_selenium_time = time.time()
-            response = qa_chain.invoke({"query": selenium_prompt})
-            st.write(response['result'])
-            st.write(f"Selenium script generation time: {time.time() - start_selenium_time:.2f} seconds")
+            try:
+                start_selenium_time = time.time()
+                response = qa_chain.invoke({"query": selenium_prompt})
+                st.write(response['result'])
+                st.write(f"Selenium script generation time: {time.time() - start_selenium_time:.2f} seconds")
+            except OpenAIError as e:
+                st.error(f"An error occurred while generating the Selenium script: {e}")
         else:
             st.write("Please enter a test case to generate a Selenium script.")
