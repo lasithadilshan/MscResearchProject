@@ -29,11 +29,7 @@ hide_streamlit_style = """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 # Get the API key from Streamlit secrets
-try:
-    OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
-except Exception as e:
-    st.error("Failed to load OpenAI API key. Please check your secrets configuration.")
-    st.stop()
+OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
 
 # Streamlit sidebar setup
 with st.sidebar:
@@ -47,38 +43,34 @@ def extract_text_from_file(file):
     text = ""
     file_ext = os.path.splitext(file.name)[1].lower()
 
-    try:
-        # Handle PDF files
-        if file_ext == ".pdf":
-            pdf_reader = PdfReader(file)
-            for page in pdf_reader.pages:
-                text += page.extract_text() or ""
+    # Handle PDF files
+    if file_ext == ".pdf":
+        pdf_reader = PdfReader(file)
+        for page in pdf_reader.pages:
+            text += page.extract_text()
 
-        # Handle Word (.docx) files
-        elif file_ext == ".docx":
-            doc = Document(file)
-            for para in doc.paragraphs:
-                text += para.text + "\n"
+    # Handle Word (.docx) files
+    elif file_ext == ".docx":
+        doc = Document(file)
+        for para in doc.paragraphs:
+            text += para.text + "\n"
 
-        # Handle text (.txt) files
-        elif file_ext == ".txt":
-            text = file.read().decode("utf-8")
+    # Handle text (.txt) files
+    elif file_ext == ".txt":
+        text = file.read().decode("utf-8")
 
-        # Handle Excel files (.xlsx, .xls)
-        elif file_ext in [".xlsx", ".xls"]:
-            df = pd.read_excel(file)
-            text = df.to_string()
+    # Handle Excel files (.xlsx, .xls)
+    elif file_ext in [".xlsx", ".xls"]:
+        df = pd.read_excel(file)
+        text = df.to_string()
 
-        # Handle PowerPoint files (.pptx, .ppt)
-        elif file_ext in [".pptx", ".ppt"]:
-            ppt = pptx.Presentation(file)
-            for slide in ppt.slides:
-                for shape in slide.shapes:
-                    if hasattr(shape, "text"):
-                        text += shape.text + "\n"
-    except Exception as e:
-        st.error(f"Error processing file: {str(e)}")
-        return ""
+    # Handle PowerPoint files (.pptx, .ppt)
+    elif file_ext in [".pptx", ".ppt"]:
+        ppt = pptx.Presentation(file)
+        for slide in ppt.slides:
+            for shape in slide.shapes:
+                if hasattr(shape, "text"):
+                    text += shape.text + "\n"
 
     return text
 
@@ -90,10 +82,6 @@ def process_uploaded_file(uploaded_file):
 # Function to create vector store from extracted text
 @st.cache_resource
 def create_vector_store(text):
-    if not text.strip():
-        st.error("No text was extracted from the document. Please try another file.")
-        return None
-        
     text_splitter = RecursiveCharacterTextSplitter(
         separators="\n",
         chunk_size=800,
@@ -104,24 +92,11 @@ def create_vector_store(text):
     embeddings = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY)
     return FAISS.from_texts(chunks, embeddings)
 
-# Initialize LLM and QA chain
-@st.cache_resource
-def get_qa_chain():
-    llm = ChatOpenAI(
-        openai_api_key=OPENAI_API_KEY,
-        temperature=0.1,
-        model_name="gpt-4"
-    )
-    return llm
-
 # Streamlit app setup
 st.header("BRD to User Story, Test Case, Cucumber Script, and Selenium Script")
 
 # Set up tabs for different functionalities
 tab1, tab2, tab3, tab4 = st.tabs(["User Story Generation", "User Story to Test Case", "Test Case to Cucumber Script", "Test Case to Selenium Script"])
-
-# Initialize components
-llm = get_qa_chain()
 
 # User Story Generation Tab
 with tab1:
@@ -130,34 +105,39 @@ with tab1:
         text = process_uploaded_file(uploaded_file)
         if text:
             vector_store = create_vector_store(text)
-            if vector_store:  # Only proceed if vector store was created successfully
-                prompt_message = """
-Imagine you are a Senior Business Analyst. 
-Your responsibility is to read the entire Business Requirement Document (BRD) 
-and convert it into detailed User Stories. 
-Think step-by-step and ensure you write all possible User Stories derived from the BRD.
-Provide fully complete User Stories only, 
-without any additional explanation or sentences.
-give only user stories with the standard format of writing user stories
-"""
-                start_query_time = time.time()
-                matches = vector_store.similarity_search(prompt_message, k=3)
-                
-                qa_chain = RetrievalQA.from_chain_type(
-                    llm=llm,
-                    chain_type="stuff",
-                    retriever=vector_store.as_retriever()
-                )
-                
-                try:
-                    response = qa_chain.invoke({"query": prompt_message})
-                    st.write(response['result'])
-                    
-                    # Display timing info for performance insights
-                    st.write(f"Document loading time: {time.time() - start_time:.2f} seconds")
-                    st.write(f"Query processing time: {time.time() - start_query_time:.2f} seconds")
-                except Exception as e:
-                    st.error(f"Error generating user stories: {str(e)}")
+            prompt_message = (
+            """ Imagine you are a Senior Business Analyst. "
+
+                "Your responsibility is to read the entire Business Requirement Document (BRD) "
+
+                "and convert it into detailed User Stories. "
+
+                "Think step-by-step and ensure you write all possible User Stories derived from the BRD." 
+
+                "Provide fully complete User Stories only, "
+
+                "without any additional explanation or sentences."
+
+                "give only user stories with the standard format of writing user stories """
+            )
+            start_query_time = time.time()
+            matches = vector_store.similarity_search(prompt_message, k=3)  # Retrieve top 3 similar texts
+            llm = ChatOpenAI(
+                openai_api_key=OPENAI_API_KEY,
+                temperature=0.1,
+                model_name="gpt-4o"
+            )
+            qa_chain = RetrievalQA.from_chain_type(
+                llm=llm,
+                chain_type="stuff",
+                retriever=vector_store.as_retriever()
+            )
+            response = qa_chain.invoke({"query": prompt_message})
+            st.write(response['result'])
+
+            # Display timing info for performance insights
+            st.write(f"Document loading time: {time.time() - start_time:.2f} seconds")
+            st.write(f"Query processing time: {time.time() - start_query_time:.2f} seconds")
     else:
         st.write("Please upload a BRD document in the sidebar to generate user stories.")
 
@@ -177,12 +157,9 @@ with tab2:
                 "\n* **Focus** solely on the test cases themselves, omitting any additional explanations or context." 
             )
             start_test_case_time = time.time()
-            try:
-                response = qa_chain.invoke({"query": test_case_prompt})
-                st.write(response['result'])
-                st.write(f"Test case generation time: {time.time() - start_test_case_time:.2f} seconds")
-            except Exception as e:
-                st.error(f"Error generating test cases: {str(e)}")
+            response = qa_chain.invoke({"query": test_case_prompt})
+            st.write(response['result'])
+            st.write(f"Test case generation time: {time.time() - start_test_case_time:.2f} seconds")
         else:
             st.write("Please enter a user story to generate test cases.")
 
@@ -203,12 +180,9 @@ with tab3:
                 "\n* **Deliver** both the complete feature file and the complete Java step definition file."
             )
             start_cucumber_time = time.time()
-            try:
-                response = qa_chain.invoke({"query": cucumber_prompt})
-                st.write(response['result'])
-                st.write(f"Cucumber script generation time: {time.time() - start_cucumber_time:.2f} seconds")
-            except Exception as e:
-                st.error(f"Error generating Cucumber script: {str(e)}")
+            response = qa_chain.invoke({"query": cucumber_prompt})
+            st.write(response['result'])
+            st.write(f"Cucumber script generation time: {time.time() - start_cucumber_time:.2f} seconds")
         else:
             st.write("Please enter a test case to generate a Cucumber script.")
 
@@ -226,11 +200,8 @@ with tab4:
                     "such as locating elements, interacting with the web page, and validating outcomes. Here is the test case: \n\n" + selenium_test_case_text
             )
             start_selenium_time = time.time()
-            try:
-                response = qa_chain.invoke({"query": selenium_prompt})
-                st.write(response['result'])
-                st.write(f"Selenium script generation time: {time.time() - start_selenium_time:.2f} seconds")
-            except Exception as e:
-                st.error(f"Error generating Selenium script: {str(e)}")
+            response = qa_chain.invoke({"query": selenium_prompt})
+            st.write(response['result'])
+            st.write(f"Selenium script generation time: {time.time() - start_selenium_time:.2f} seconds")
         else:
             st.write("Please enter a test case to generate a Selenium script.")
