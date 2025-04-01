@@ -10,6 +10,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_openai import ChatOpenAI
+from langchain import BaseCache  # Import the necessary class/module for BaseCache
 from openai import OpenAIError
 
 # Streamlit page configuration
@@ -27,9 +28,14 @@ hide_streamlit_style = """
 """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
-# Ensure ChatOpenAI is fully defined
+# Ensure ChatOpenAI is fully defined with BaseCache
 try:
-    ChatOpenAI.model_rebuild()
+    class CustomCache(BaseCache):
+        # Define the required methods or attributes for the cache if necessary
+        pass
+
+    # Assign the base cache and rebuild the model definition for ChatOpenAI
+    ChatOpenAI.model_rebuild(CustomCache)
 except Exception as e:
     st.error(f"Failed to reconstruct ChatOpenAI model: {e}")
 
