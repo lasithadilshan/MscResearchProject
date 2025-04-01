@@ -12,12 +12,6 @@ from langchain_community.vectorstores import FAISS
 from langchain_openai import ChatOpenAI
 from openai import OpenAIError
 
-# Ensure ChatOpenAI is fully defined
-try:
-    ChatOpenAI.model_rebuild()
-except Exception as e:
-    st.error(f"Failed to reconstruct ChatOpenAI model: {e}")
-
 # Streamlit page configuration
 st.set_page_config(page_title="SDLC Automate APP", page_icon="images/favicon.png")
 
@@ -32,6 +26,12 @@ hide_streamlit_style = """
     </style>
 """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+
+# Ensure ChatOpenAI is fully defined
+try:
+    ChatOpenAI.model_rebuild()
+except Exception as e:
+    st.error(f"Failed to reconstruct ChatOpenAI model: {e}")
 
 # Get the API key from Streamlit secrets
 OPENAI_API_KEY = st.secrets.get("OPENAI_API_KEY")
