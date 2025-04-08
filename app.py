@@ -123,9 +123,9 @@ with tab1:
             start_query_time = time.time()
             matches = vector_store.similarity_search(prompt_message, k=3)  # Retrieve top 3 similar texts
             llm = ChatOpenAI(
-                openai_api_key=OPENAI_API_KEY,
+                api_key=OPENAI_API_KEY,
                 temperature=0.1,
-                model_name="gpt-4o"
+                model="gpt-4o"
             )
             qa_chain = RetrievalQA.from_chain_type(
                 llm=llm,
