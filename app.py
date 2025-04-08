@@ -10,6 +10,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 st.set_page_config(
     page_title="SDLC Automate APP",
@@ -17,25 +18,31 @@ st.set_page_config(
 )
 
 # Hide Streamlit branding, menu, and footer
-hide_streamlit_style = """
-    <style>
-    #MainMenu {visibility: hidden;} /* Hides the "Manage app" menu */
-    footer {visibility: hidden;} /* Hides the Streamlit footer */
-    header {visibility: hidden;} /* Hides the header */
-    ._link_gzau3_10 {display: none;} /* Hides "Hosted with Streamlit" */
-    .stDeployButton {display: none !important;} /* Hides the deploy button */
-    </style>
-"""
-st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+# hide_streamlit_style = """
+#     <style>
+#     #MainMenu {visibility: hidden;} /* Hides the "Manage app" menu */
+#     footer {visibility: hidden;} /* Hides the Streamlit footer */
+#     header {visibility: hidden;} /* Hides the header */
+#     ._link_gzau3_10 {display: none;} /* Hides "Hosted with Streamlit" */
+#     .stDeployButton {display: none !important;} /* Hides the deploy button */
+#     </style>
+# """
+# st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 # Get the API key from Streamlit secrets
-OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
+os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
 
 # Streamlit sidebar setup
 with st.sidebar:
     st.title("Your BRD Documents")
+    model_selection = st.selectbox(
+        "Select AI Model",
+        options=["Open AI GPT 4o", "Google Gemini 2.0 Flash"]
+    )
+    st.write(f"Selected Model: {model_selection}")
     uploaded_file = st.file_uploader("Upload a file to generate user stories", type=["pdf", "docx", "txt", "xlsx", "pptx"])
-
+    
 # Function to extract text from various file types
 @st.cache_resource
 def extract_text_from_file(file):
@@ -89,7 +96,7 @@ def create_vector_store(text):
         length_function=len
     )
     chunks = text_splitter.split_text(text)
-    embeddings = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY)
+    embeddings = OpenAIEmbeddings()
     return FAISS.from_texts(chunks, embeddings)
 
 # Streamlit app setup
@@ -123,11 +130,18 @@ with tab1:
             start_query_time = time.time()
             matches = vector_store.similarity_search(prompt_message, k=3)  # Retrieve top 3 similar texts
 
-            llm = ChatOpenAI(
-                model="gpt-4o",
-                temperature=0,
-                api_key=OPENAI_API_KEY
-            )
+            if model_selection == "Open AI GPT 4o":
+                llm = ChatOpenAI(
+                    model="gpt-4o",
+                    temperature=0,
+                )
+            elif model_selection == "Google Gemini 2.0 Flash":
+                llm = ChatGoogleGenerativeAI(
+                    model="gemini-2.0-flash",
+                    temperature=0,
+                )
+
+
             qa_chain = RetrievalQA.from_chain_type(
                 llm=llm,
                 chain_type="stuff",
