@@ -122,7 +122,7 @@ with tab1:
             )
             start_query_time = time.time()
             matches = vector_store.similarity_search(prompt_message, k=3)  # Retrieve top 3 similar texts
-            ChatOpenAI.model_rebuild()
+
             llm = ChatOpenAI(
                 model="gpt-4o",
                 temperature=0,
