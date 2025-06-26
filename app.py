@@ -206,12 +206,12 @@ if uploaded_file:
         if model_selection == "Open AI GPT 4o":
             llm = ChatOpenAI(
                 model="gpt-4o",
-                temperature=0,
+                temperature=0.7,
             )
         elif model_selection == "Google Gemini 2.0 Flash":
             llm = ChatGoogleGenerativeAI(
                 model="gemini-2.0-flash",
-                temperature=0,
+                temperature=0.7,
             )
         
         qa_chain = RetrievalQA.from_chain_type(
