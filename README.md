@@ -37,7 +37,7 @@ This application is a Streamlit-based tool designed to assist users in generatin
 ### Prerequisites
 
 - Python 3.9 or higher
-- Virtual environment (optional but recommended)
+- uv package manager (for faster dependency management)
 
 ### Steps
 
@@ -46,17 +46,50 @@ This application is a Streamlit-based tool designed to assist users in generatin
    git clone https://github.com/lasithadilshan/MscResearchProject.git
    cd MscResearchProject
    ```
+
+2. Install uv (if not already installed):
+   ```bash
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   source $HOME/.local/bin/env
+   ```
+
+3. Install dependencies with uv (much faster than pip):
+   ```bash
+   uv sync
+   ```
+
+4. Set up your API keys in Streamlit secrets:
+   - Create `.streamlit/secrets.toml` file:
+   ```toml
+   OPENAI_API_KEY = "your_openai_api_key"
+   GOOGLE_API_KEY = "your_google_api_key"
+   ```
+
+5. Run the application:
+   ```bash
+   # Using uv (recommended)
+   ./run.sh
+   
+   # Or manually with uv
+   uv run streamlit run app.py
+   
+   # Traditional method (slower)
+   streamlit run app.py
+   ```
+
+### Alternative Installation (Traditional pip method)
+
+If you prefer using pip instead of uv:
+
+1. Create a virtual environment:
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+   ```
+
 2. Install dependencies:
    ```bash
    pip install -r requirements.txt
-   ```
-3. Create a `.env` or `app_secret.py` file with your OpenAI API key:
-   ```python
-   OPENAI_API_KEY = "your_openai_api_key"
-   ```
-4. Run the application:
-   ```bash
-   streamlit run <application_file_name>.py
    ```
 
 ---

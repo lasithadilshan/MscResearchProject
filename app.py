@@ -1,20 +1,21 @@
-import streamlit as st
-from PyPDF2 import PdfReader
-from docx import Document
-import pptx
-import pandas as pd
 import os
+import re
 import time
+
+import numpy as np
+import pandas as pd
+import pptx
+import streamlit as st
+from docx import Document
 from langchain.chains.retrieval_qa.base import RetrievalQA
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
-from langchain_openai import ChatOpenAI
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_openai import ChatOpenAI
+from PyPDF2 import PdfReader
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-import numpy as np
-import re
 
 st.set_page_config(
     page_title="SDLC Automate APP",
@@ -183,7 +184,7 @@ def create_vector_store(text):
         length_function=len
     )
     chunks = text_splitter.split_text(text)
-    embeddings = OpenAIEmbeddings()
+    embeddings = HuggingFaceEmbeddings()
     return FAISS.from_texts(chunks, embeddings)
 
 # Streamlit app setup

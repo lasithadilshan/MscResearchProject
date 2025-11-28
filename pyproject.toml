@@ -1,0 +1,50 @@
+[project]
+name = "msc-research-project"
+version = "0.1.0"
+description = "SDLC Automate APP - BRD to User Story, Test Case, Cucumber Script, and Selenium Script"
+readme = "README.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.9"
+dependencies = [
+    "streamlit==1.38.0",
+    "PyPDF2==3.0.1",
+    "python-docx==0.8.11",
+    "python-pptx==0.6.21",
+    "pandas==2.1.1",
+    "openai==1.71.0",
+    "langchain==0.3.0",
+    "langchain-openai==0.3.12",
+    "faiss-cpu==1.8.0",
+    "langchain-community==0.3.0",
+    "langchain-core==0.3.50",
+    "scikit-learn==1.6.1",
+    "openpyxl==3.1.5",
+    "langchain-google-genai==2.1.2",
+    "numpy==1.26.4",
+    "langchain-huggingface",
+    "sentence-transformers",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "black",
+    "flake8",
+    "mypy",
+]
+
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = []
+
+[tool.black]
+line-length = 88
+target-version = ['py39']
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true

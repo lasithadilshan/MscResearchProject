@@ -1,2 +1,66 @@
+# Secrets
 app_secret.py
+*.key
+*.pem
+*.env
+.env
+.env.*
+.streamlit/secrets.toml
+
+# Virtual environments
 venv/
+.env/
+.env*/
+.venv/
+venv*/
+env/
+env*/
+
+# uv
+.venv/
+uv.lock
+
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+pip-wheel-metadata/
+
+# Testing and coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.coverage.unit
+.coverage.e2e
+
+# Type checking and linting caches
+.mypy_cache/
+.pytype/
+ruff_cache/
+.ruff_cache/
+
+# Logs
+*.log
+
+# IDE/editor settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+# Docker
+docker-compose.override.yml
+*.tmp
