@@ -23,6 +23,7 @@ dependencies = [
     "numpy==1.26.4",
     "langchain-huggingface",
     "sentence-transformers",
+    "python-pptx==0.6.21",
 ]
 
 [project.optional-dependencies]
