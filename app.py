@@ -470,52 +470,7 @@ with tab2:
 # Test Case to Cucumber Script Tab
 with tab3:
     st.subheader("Convert Test Case to Cucumber Script")
-    
-    # Add configuration options in an expander
-    with st.expander("⚙️ Cucumber Generation Settings (Optional)", expanded=False):
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            framework = st.selectbox(
-                "Testing Framework",
-                options=['selenium', 'appium', 'restassured', 'playwright'],
-                index=0,
-                help="Select the automation framework for your tests"
-            )
-            
-            language = st.selectbox(
-                "Programming Language",
-                options=['java', 'javascript', 'python', 'ruby'],
-                index=0,
-                help="Select the language for step definitions"
-            )
-            
-            pattern = st.selectbox(
-                "Design Pattern",
-                options=['page_object', 'screenplay', 'traditional'],
-                index=0,
-                help="Select the design pattern for your test code"
-            )
-        
-        with col2:
-            tags_input = st.text_input(
-                "Tags (comma-separated)",
-                value="@automated, @regression",
-                help="Enter tags for test categorization"
-            )
-            tags = [tag.strip() for tag in tags_input.split(',') if tag.strip()]
-            
-            include_hooks = st.checkbox("Include Setup/Teardown Hooks", value=True)
-            include_examples = st.checkbox("Include Example Tables", value=True)
-            include_negative = st.checkbox("Include Negative Scenarios", value=True)
-        
-        use_advanced = st.checkbox(
-            "Use Advanced Configuration", 
-            value=False,
-            help="Enable advanced configuration options above"
-        )
-    
-    # Main text area for test case input
+    # Simple text area for test case input
     test_case_text = st.text_area(
         "Enter the test case text here to generate Cucumber script:",
         height=200,
@@ -527,7 +482,7 @@ Test Case: User Login
 - Then the user should be redirected to the dashboard"""
     )
 
-    # Generate button with different modes
+    # Generate and clear buttons
     col1, col2 = st.columns([3, 1])
     with col1:
         generate_button = st.button("🥒 Generate Cucumber Script", type="primary", use_container_width=True)
@@ -537,53 +492,47 @@ Test Case: User Login
 
     if generate_button:
         if test_case_text and qa_chain:
-            # Import the generator module (make sure the module is in your project)
-            from cucumber_generator import (
-                CucumberConfig, generate_cucumber_script_advanced_streamlit,
-                generate_cucumber_script_streamlit)
-            
-            if use_advanced:
-                # Use advanced configuration
-                custom_config = CucumberConfig(
-                    framework=framework,
-                    language=language,
-                    pattern=pattern,
-                    tags=tags,
-                    include_hooks=include_hooks,
-                    include_examples=include_examples,
-                    include_negative=include_negative,
-                    show_confidence=show_confidence
-                )
-                
-                cucumber_script = generate_cucumber_script_advanced_streamlit(
-                    qa_chain=qa_chain,
-                    test_case_text=test_case_text,
-                    config=custom_config,
-                    calculate_confidence_fn=calculate_confidence_level,
-                    calculate_match_fn=calculate_match_percentage,
-                    display_metrics_fn=display_confidence_metrics
-                )
-            else:
-                # Use basic configuration
-                cucumber_script = generate_cucumber_script_streamlit(
-                    qa_chain=qa_chain,
-                    test_case_text=test_case_text,
-                    show_confidence=show_confidence,
-                    calculate_confidence_fn=calculate_confidence_level,
-                    calculate_match_fn=calculate_match_percentage,
-                    display_metrics_fn=display_confidence_metrics
-                )
-            
-            # Add download button for the generated script
-            if cucumber_script:
-                st.download_button(
-                    label="📥 Download Cucumber Script",
-                    data=cucumber_script,
-                    file_name="cucumber_test_suite.txt",
-                    mime="text/plain",
-                    use_container_width=True
-                )
-                
+            cucumber_prompt = (
+                "You are a BDD expert. Convert the test case into professional Cucumber Gherkin format.\n\n"
+                "TEST CASE:\n" + test_case_text + "\n\n"
+                "INSTRUCTIONS:\n"
+                "1. Start with 'Feature:' for business capability\n"
+                "2. Add 'Scenario:' for each test case\n"
+                "3. Use Given/When/Then format\n"
+                "4. Use 'And' for additional steps\n"
+                "5. Add @tags for @automated, @regression, @smoke\n"
+                "6. Include realistic test data\n"
+                "7. Cover happy path and error scenarios\n\n"
+                "FORMAT:\n"
+                "Feature: [Business capability]\n"
+                "  Scenario: [Test scenario name]\n"
+                "    Given [precondition]\n"
+                "      And [more preconditions]\n"
+                "    When [user action]\n"
+                "      And [more actions]\n"
+                "    Then [expected result]\n"
+                "      And [assertions]\n\n"
+                "Generate ONLY Gherkin code, no explanations."
+            )
+            start_cucumber_time = time.time()
+            response = qa_chain.invoke({"query": cucumber_prompt})
+            st.subheader("Generated Cucumber Script")
+            st.code(response['result'], language="gherkin")
+            # Quality metrics
+            if show_confidence:
+                st.subheader("Quality Assessment")
+                confidence_score = calculate_confidence_level(cucumber_prompt, response['result'])
+                match_score = calculate_match_percentage(response['result'], test_case_text)
+                display_confidence_metrics(confidence_score, match_score)
+            # Download button
+            st.download_button(
+                label="📥 Download Cucumber Script",
+                data=response['result'],
+                file_name="cucumber_test_suite.feature",
+                mime="text/plain",
+                use_container_width=True
+            )
+            st.write(f"⏱️ Generation time: {time.time() - start_cucumber_time:.2f} seconds")
         elif not qa_chain:
             st.error("❌ Please upload a BRD document first to initialize the AI model.")
         else:
