@@ -121,7 +121,7 @@ with st.sidebar:
     st.title("Your BRD Documents")
     model_selection = st.selectbox(
         "Select AI Model",
-        options=["Open AI GPT 4o", "Google Gemini 2.0 Flash"]
+        options=["Open AI GPT 4.1", "Google Gemini 2.0 Flash"]
     )
     st.write(f"Selected Model: {model_selection}")
     uploaded_file = st.file_uploader("Upload a file to generate user stories", type=["pdf", "docx", "txt", "xlsx", "pptx"])
@@ -204,22 +204,25 @@ if uploaded_file:
     if text:
         vector_store = create_vector_store(text)
         
-        if model_selection == "Open AI GPT 4o":
+        if model_selection == "Open AI GPT 4.1":
             llm = ChatOpenAI(
-                model="gpt-4o",
-                temperature=0.7,
+                model="gpt-4.1",
+                temperature=0.5,
             )
         elif model_selection == "Google Gemini 2.0 Flash":
             llm = ChatGoogleGenerativeAI(
                 model="gemini-2.0-flash",
                 temperature=0.7,
             )
-        
-        qa_chain = RetrievalQA.from_chain_type(
-            llm=llm,
-            chain_type="stuff",
-            retriever=vector_store.as_retriever()
-        )
+        else:
+            llm = None
+            st.error("Please select a valid AI model.")
+        if llm:
+            qa_chain = RetrievalQA.from_chain_type(
+                llm=llm,
+                chain_type="stuff",
+                retriever=vector_store.as_retriever()
+            )
 
 # User Story Generation Tab
 with tab1:
