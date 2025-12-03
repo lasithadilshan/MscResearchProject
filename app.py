@@ -536,10 +536,8 @@ Test Case: User Login
         if test_case_text and qa_chain:
             # Import the generator module (make sure the module is in your project)
             from cucumber_generator import (
-                generate_cucumber_script_streamlit, 
-                generate_cucumber_script_advanced_streamlit,
-                CucumberConfig
-            )
+                CucumberConfig, generate_cucumber_script_advanced_streamlit,
+                generate_cucumber_script_streamlit)
             
             if use_advanced:
                 # Use advanced configuration
@@ -596,10 +594,22 @@ with tab4:
     if st.button("Generate Selenium Script"):
         if selenium_test_case_text and qa_chain:
             selenium_prompt = (
-                "Assume you are a test automation engineer specializing in Selenium. Your task is to convert the following test case "
-                "into a Selenium WebDriver script using Python. Ensure to include all steps to perform the actions in the test case, "
-                "Make sure to give fully complete selenium full code."
-                "such as locating elements, interacting with the web page, and validating outcomes. Here is the test case: \n\n" + selenium_test_case_text
+                "You are a Senior Test Automation Engineer specializing in Selenium and Python."
+                " Convert the following test case into a robust, production-ready Selenium WebDriver script in Python."
+                "\n\nINSTRUCTIONS:\n"
+                "- Use best practices for maintainability, reliability, and readability.\n"
+                "- Include all necessary imports, setup, and teardown logic.\n"
+                "- Use explicit waits (WebDriverWait) for element interactions, not time.sleep.\n"
+                "- Add comments for each major step.\n"
+                "- Validate all expected outcomes with assert statements.\n"
+                "- Handle exceptions gracefully and log errors.\n"
+                "- Use Page Object Model if the scenario is complex.\n"
+                "- Ensure the script is ready to run as a standalone test.\n"
+                "- Use realistic locators (id, name, xpath, css selector) based on the test case.\n"
+                "- If data is required, use sample values from the test case.\n"
+                "- If login or setup is needed, include those steps.\n"
+                "\nTest Case:\n" + selenium_test_case_text + "\n\n"
+                "Return ONLY the complete Python code, no explanations, no markdown."
             )
             start_selenium_time = time.time()
             response = qa_chain.invoke({"query": selenium_prompt})
