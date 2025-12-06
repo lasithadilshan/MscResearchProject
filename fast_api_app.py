@@ -1,11 +1,12 @@
+import json
 import os
 import re
 import time
 from io import BytesIO
-from typing import Optional
 
 import numpy as np
 import pandas as pd
+import pdfplumber
 import pptx
 from docx import Document
 from fastapi import BackgroundTasks, FastAPI, File, HTTPException, UploadFile
@@ -84,6 +85,41 @@ vector_stores = {}
 qa_chains = {}
 
 
+def parse_json_output(text: str):
+    """Extract JSON from model output, stripping optional code fences."""
+    clean = text.strip()
+    fence = re.search(r"```json\s*(.*?)```", clean, re.DOTALL)
+    if fence:
+        clean = fence.group(1).strip()
+    else:
+        fence = re.search(r"```\s*(.*?)```", clean, re.DOTALL)
+        if fence:
+            clean = fence.group(1).strip()
+    try:
+        return json.loads(clean), None
+    except Exception as e:
+        return clean, str(e)
+
+
+def get_or_create_qa_chain(document_id: str, model_selection: str) -> RetrievalQA:
+    """Ensure QA chain uses the requested model; rebuild if model changed."""
+    if document_id not in uploaded_documents or document_id not in vector_stores:
+        raise HTTPException(status_code=404, detail="Document not found. Please upload a document first.")
+
+    stored_model = uploaded_documents[document_id].get("model")
+    if stored_model != model_selection or document_id not in qa_chains:
+        llm = initialize_llm(model_selection)
+        qa_chain = RetrievalQA.from_chain_type(
+            llm=llm,
+            chain_type="stuff",
+            retriever=vector_stores[document_id].as_retriever()
+        )
+        qa_chains[document_id] = qa_chain
+        uploaded_documents[document_id]["model"] = model_selection
+        print(f"[QA_CHAIN] Rebuilt for doc={document_id} model={model_selection}")
+    return qa_chains[document_id]
+
+
 # Function to calculate confidence level based on prompt-answer accuracy
 def calculate_confidence_level(prompt: str, answer: str) -> float:
     """Calculate confidence level based on how well the answer addresses the prompt."""
@@ -155,9 +191,22 @@ def extract_text_from_file(file_content: bytes, filename: str) -> str:
 
     # Handle PDF files
     if file_ext == ".pdf":
-        pdf_reader = PdfReader(BytesIO(file_content))
-        for page in pdf_reader.pages:
-            text += page.extract_text()
+        # Use pdfplumber to capture text and tables; fallback to PyPDF2 on errors
+        try:
+            with pdfplumber.open(BytesIO(file_content)) as pdf:
+                for page in pdf.pages:
+                    page_text = page.extract_text() or ""
+                    text += page_text + "\n"
+                    tables = page.extract_tables()
+                    for table in tables or []:
+                        # Flatten table rows into TSV-style lines for embedding
+                        rows = ["\t".join(cell if cell is not None else "" for cell in row) for row in table]
+                        text += "\n".join(rows) + "\n"
+        except Exception as e:
+            print(f"pdfplumber failed, falling back to PyPDF2: {e}")
+            pdf_reader = PdfReader(BytesIO(file_content))
+            for page in pdf_reader.pages:
+                text += page.extract_text()
 
     # Handle Word (.docx) files
     elif file_ext == ".docx":
@@ -288,9 +337,9 @@ async def generate_user_stories(request: GenerateUserStoriesRequest, document_id
     try:
         if document_id not in qa_chains:
             raise HTTPException(status_code=404, detail="Document not found. Please upload a document first.")
-        
-        qa_chain = qa_chains[document_id]
         text = uploaded_documents[document_id]["text"]
+        qa_chain = get_or_create_qa_chain(document_id, request.model)
+        print(f"[MODEL] generate_user_stories doc={document_id} model={request.model}")
         
         prompt_message = """
 You are an Expert Business Analyst with 20+ years of experience in requirements engineering and Agile transformation.
@@ -424,9 +473,11 @@ BEGIN EXTRACTION NOW - BE EXHAUSTIVE!
         conf_level, _ = get_confidence_category(confidence_score)
         match_level, _ = get_confidence_category(match_score)
         overall_level, _ = get_confidence_category(overall_score)
-        
+        parsed, parse_error = parse_json_output(response['result'])
+
         return {
-            "user_stories": response['result'],
+            "user_stories": parsed,
+            "parse_error": parse_error,
             "quality_assessment": {
                 "confidence_score": round(confidence_score, 2),
                 "match_score": round(match_score, 2),
@@ -450,8 +501,8 @@ async def convert_to_test_cases(request: ConvertTestCaseRequest, document_id: st
         
         if not request.user_story_text.strip():
             raise HTTPException(status_code=400, detail="User story text is required")
-        
-        qa_chain = qa_chains[document_id]
+        qa_chain = get_or_create_qa_chain(document_id, request.model)
+        print(f"[MODEL] convert_to_test_cases doc={document_id} model={request.model}")
         
         test_case_prompt = """
 You are a highly experienced Senior QA Engineer with over 15 years of expertise in software testing and quality assurance.
@@ -500,9 +551,11 @@ IMPORTANT: Do NOT include trailing commas before closing brackets or braces.
         conf_level, _ = get_confidence_category(confidence_score)
         match_level, _ = get_confidence_category(match_score)
         overall_level, _ = get_confidence_category(overall_score)
-        
+        parsed, parse_error = parse_json_output(response['result'])
+
         return {
-            "test_cases": response['result'],
+            "test_cases": parsed,
+            "parse_error": parse_error,
             "quality_assessment": {
                 "confidence_score": round(confidence_score, 2),
                 "match_score": round(match_score, 2),
@@ -526,8 +579,8 @@ async def convert_to_cucumber(request: ConvertCucumberRequest, document_id: str)
         
         if not request.test_case_text.strip():
             raise HTTPException(status_code=400, detail="Test case text is required")
-        
-        qa_chain = qa_chains[document_id]
+        qa_chain = get_or_create_qa_chain(document_id, request.model)
+        print(f"[MODEL] convert_to_cucumber doc={document_id} model={request.model}")
         
         cucumber_prompt = """You are a BDD expert. Convert the test case into professional Cucumber Gherkin format.
 
@@ -593,8 +646,8 @@ async def convert_to_selenium(request: ConvertSeleniumRequest, document_id: str)
         
         if not request.test_case_text.strip():
             raise HTTPException(status_code=400, detail="Test case text is required")
-        
-        qa_chain = qa_chains[document_id]
+        qa_chain = get_or_create_qa_chain(document_id, request.model)
+        print(f"[MODEL] convert_to_selenium doc={document_id} model={request.model}")
         
         selenium_prompt = """You are a Senior Test Automation Engineer specializing in Selenium and Python. Convert the following test case into a robust, production-ready Selenium WebDriver script in Python.
 

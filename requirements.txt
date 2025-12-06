@@ -1,23 +1,26 @@
+
 streamlit==1.38.0
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 python-multipart==0.0.6
 
+
 # Data validation
-pydantic==2.5.0
-pydantic-settings==2.1.0
-pydantic-core==2.14.0
+pydantic==2.12.5
+pydantic-settings==2.12.0
+pydantic-core==2.41.5
+
 
 # LLM and NLP Libraries
 langchain==0.3.0
 langchain-openai==0.3.12
 langchain-google-genai==2.1.2
-langchain-huggingface==0.0.17
+langchain-huggingface==0.1.2
 langchain-community==0.3.0
 langchain-core==0.3.50
-langchain-text-splitters==0.0.1
-sentence-transformers
-huggingface-hub==0.19.4
+langchain-text-splitters==0.3.7
+sentence-transformers==5.1.2
+huggingface-hub==0.36.0
 openai==1.71.0
 
 # Vector Store and Embeddings
@@ -27,8 +30,9 @@ faiss-cpu==1.8.0
 PyPDF2==3.0.1
 python-docx==0.8.11
 python-pptx==0.6.23
-openpyxl==3.10.10
+openpyxl==3.1.2
 pandas==2.1.3
+pdfplumber==0.7.0  # Added pdfplumber dependency
 
 # Machine Learning
 scikit-learn==1.6.1
