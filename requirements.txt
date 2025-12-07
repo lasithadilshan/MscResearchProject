@@ -41,6 +41,7 @@ numpy==1.26.4
 # Utilities
 python-dotenv==1.0.0
 requests==2.31.0
+toml==0.10.2
 
 # Optional: For production deployment
 gunicorn==21.2.0

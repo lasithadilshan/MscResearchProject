@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import pdfplumber
 import pptx
+import toml
 from docx import Document
 from fastapi import BackgroundTasks, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -39,12 +40,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Get API keys from environment
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+# Get API keys from secrets.toml file
+secrets_path = os.path.join(os.path.dirname(__file__), ".streamlit", "secrets.toml")
+try:
+    secrets = toml.load(secrets_path)
+    OPENAI_API_KEY = secrets.get("OPENAI_API_KEY")
+    GOOGLE_API_KEY = secrets.get("GOOGLE_API_KEY")
+except FileNotFoundError:
+    raise ValueError(f"secrets.toml file not found at {secrets_path}")
+except Exception as e:
+    raise ValueError(f"Error reading secrets.toml: {str(e)}")
 
 if not OPENAI_API_KEY or not GOOGLE_API_KEY:
-    raise ValueError("OPENAI_API_KEY and GOOGLE_API_KEY must be set in environment variables")
+    raise ValueError("OPENAI_API_KEY and GOOGLE_API_KEY must be set in .streamlit/secrets.toml file")
 
 os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
