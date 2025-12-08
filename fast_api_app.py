@@ -1,9 +1,9 @@
+import hashlib
 import json
 import os
 import pickle
 import re
 import time
-import hashlib
 from io import BytesIO
 
 import numpy as np
@@ -419,7 +419,6 @@ async def upload_document(file: UploadFile = File(...), model: str = "Open AI GP
             "model": model,
             "vector_store_load_time_seconds": round(load_time, 2)
         }
-        }
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error uploading document: {str(e)}")
 
@@ -685,7 +684,6 @@ IMPORTANT: Do NOT include trailing commas before closing brackets or braces.
         # Cache the result
         set_cached_generation(cache_key, result)
         return result
-        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error converting to test cases: {str(e)}")
 
