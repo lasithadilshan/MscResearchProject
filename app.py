@@ -4,7 +4,6 @@ import time
 
 import numpy as np
 import pandas as pd
-import pptx
 import requests
 import streamlit as st
 from docx import Document

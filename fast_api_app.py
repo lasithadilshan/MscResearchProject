@@ -1,7 +1,9 @@
 import json
 import os
+import pickle
 import re
 import time
+import hashlib
 from io import BytesIO
 
 import numpy as np
@@ -56,6 +58,70 @@ if not OPENAI_API_KEY or not GOOGLE_API_KEY:
 
 os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
+
+# Performance optimization settings for M4 MacBook Air (CPU-only)
+RETRIEVE_TOP_K = 2  # Reduce from 4 to 2 for faster retrieval
+CHUNK_SIZE = 1000  # Optimized for CPU
+CHUNK_OVERLAP = 200  # Better context preservation
+MAX_OUTPUT_TOKENS = 800  # Cap LLM output for speed
+GENERATION_TIMEOUT_SECONDS = 45  # Timeout for LLM calls
+VECTOR_STORE_DIR = "./vector_stores"  # Persist FAISS to disk
+GENERATION_CACHE_DIR = "./generation_cache"  # Cache generated artifacts
+
+# Create directories if they don't exist
+os.makedirs(VECTOR_STORE_DIR, exist_ok=True)
+os.makedirs(GENERATION_CACHE_DIR, exist_ok=True)
+
+# In-memory cache for generation results
+generation_cache = {}
+
+
+def get_cache_key(document_id: str, artifact_type: str, input_text: str, model: str) -> str:
+    """Generate cache key from input parameters."""
+    input_hash = hashlib.md5(input_text.encode()).hexdigest()[:16]
+    return f"{document_id}_{artifact_type}_{model}_{input_hash}"
+
+
+def save_vector_store(document_id: str, vector_store) -> None:
+    """Persist FAISS vector store to disk."""
+    try:
+        with open(f"{VECTOR_STORE_DIR}/{document_id}.pkl", "wb") as f:
+            pickle.dump(vector_store, f)
+        print(f"[CACHE] Vector store saved for {document_id}")
+    except Exception as e:
+        print(f"[WARN] Failed to save vector store: {e}")
+
+
+def load_vector_store(document_id: str):
+    """Load FAISS vector store from disk if available."""
+    try:
+        path = f"{VECTOR_STORE_DIR}/{document_id}.pkl"
+        if os.path.exists(path):
+            with open(path, "rb") as f:
+                vector_store = pickle.load(f)
+            print(f"[CACHE] Vector store loaded for {document_id}")
+            return vector_store
+    except Exception as e:
+        print(f"[WARN] Failed to load vector store: {e}")
+    return None
+
+
+def get_cached_generation(cache_key: str) -> dict:
+    """Retrieve cached generation result."""
+    if cache_key in generation_cache:
+        print(f"[CACHE] Cache hit for {cache_key}")
+        return generation_cache[cache_key]
+    return None
+
+
+def set_cached_generation(cache_key: str, result: dict) -> None:
+    """Cache generation result in memory (limited to 50 recent entries)."""
+    generation_cache[cache_key] = result
+    if len(generation_cache) > 50:
+        # Remove oldest entry to maintain memory limit
+        oldest_key = next(iter(generation_cache))
+        del generation_cache[oldest_key]
+        print(f"[CACHE] Evicted oldest entry")
 
 
 # Pydantic models for request/response
@@ -120,7 +186,7 @@ def get_or_create_qa_chain(document_id: str, model_selection: str) -> RetrievalQ
         qa_chain = RetrievalQA.from_chain_type(
             llm=llm,
             chain_type="stuff",
-            retriever=vector_stores[document_id].as_retriever()
+            retriever=vector_stores[document_id].as_retriever(search_kwargs={"k": RETRIEVE_TOP_K})
         )
         qa_chains[document_id] = qa_chain
         uploaded_documents[document_id]["model"] = model_selection
@@ -247,27 +313,35 @@ def create_vector_store(text: str) -> FAISS:
     """Create and return a FAISS vector store from text."""
     text_splitter = RecursiveCharacterTextSplitter(
         separators="\n",
-        chunk_size=800,
-        chunk_overlap=50,
+        chunk_size=CHUNK_SIZE,
+        chunk_overlap=CHUNK_OVERLAP,
         length_function=len
     )
     chunks = text_splitter.split_text(text)
-    embeddings = HuggingFaceEmbeddings()
+    print(f"[PERF] Created {len(chunks)} chunks from text")
+    
+    # Use lightweight embedding model for CPU efficiency
+    embeddings = HuggingFaceEmbeddings(
+        model_name="sentence-transformers/all-MiniLM-L6-v2"
+    )
     return FAISS.from_texts(chunks, embeddings)
 
 
 # Initialize LLM based on model selection
 def initialize_llm(model_selection: str):
-    """Initialize and return the appropriate LLM."""
+    """Initialize and return the appropriate LLM with optimized parameters."""
     if model_selection == "Open AI GPT 4.1":
         return ChatOpenAI(
             model="gpt-4.1",
             temperature=0.5,
+            max_tokens=MAX_OUTPUT_TOKENS,
+            request_timeout=GENERATION_TIMEOUT_SECONDS,
         )
     elif model_selection == "Google Gemini 2.0 Flash":
         return ChatGoogleGenerativeAI(
             model="gemini-2.0-flash",
             temperature=0.7,
+            max_output_tokens=MAX_OUTPUT_TOKENS,
         )
     else:
         raise ValueError("Invalid model selection. Choose 'Open AI GPT 4.1' or 'Google Gemini 2.0 Flash'")
@@ -315,8 +389,17 @@ async def upload_document(file: UploadFile = File(...), model: str = "Open AI GP
             "model": model
         }
         
-        # Create vector store
-        vector_store = create_vector_store(text)
+        # Check if vector store exists on disk; load or create
+        start_time = time.time()
+        vector_store = load_vector_store(document_id)
+        if vector_store is None:
+            print(f"[PERF] Creating new vector store for {document_id}")
+            vector_store = create_vector_store(text)
+            save_vector_store(document_id, vector_store)
+        else:
+            print(f"[PERF] Loaded vector store from disk for {document_id}")
+        load_time = time.time() - start_time
+        
         vector_stores[document_id] = vector_store
         
         # Initialize LLM and QA chain
@@ -324,7 +407,7 @@ async def upload_document(file: UploadFile = File(...), model: str = "Open AI GP
         qa_chain = RetrievalQA.from_chain_type(
             llm=llm,
             chain_type="stuff",
-            retriever=vector_store.as_retriever()
+            retriever=vector_store.as_retriever(search_kwargs={"k": RETRIEVE_TOP_K})
         )
         qa_chains[document_id] = qa_chain
         
@@ -333,7 +416,9 @@ async def upload_document(file: UploadFile = File(...), model: str = "Open AI GP
             "document_id": document_id,
             "filename": file.filename,
             "text_length": len(text),
-            "model": model
+            "model": model,
+            "vector_store_load_time_seconds": round(load_time, 2)
+        }
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error uploading document: {str(e)}")
@@ -345,7 +430,15 @@ async def generate_user_stories(request: GenerateUserStoriesRequest, document_id
     try:
         if document_id not in qa_chains:
             raise HTTPException(status_code=404, detail="Document not found. Please upload a document first.")
+        
+        # Check cache first
         text = uploaded_documents[document_id]["text"]
+        cache_key = get_cache_key(document_id, "user_stories", text, request.model)
+        cached_result = get_cached_generation(cache_key)
+        if cached_result:
+            cached_result["from_cache"] = True
+            return cached_result
+        
         qa_chain = get_or_create_qa_chain(document_id, request.model)
         print(f"[MODEL] generate_user_stories doc={document_id} model={request.model}")
         
@@ -483,7 +576,7 @@ BEGIN EXTRACTION NOW - BE EXHAUSTIVE!
         overall_level, _ = get_confidence_category(overall_score)
         parsed, parse_error = parse_json_output(response['result'])
 
-        return {
+        result = {
             "user_stories": parsed,
             "parse_error": parse_error,
             "quality_assessment": {
@@ -494,8 +587,13 @@ BEGIN EXTRACTION NOW - BE EXHAUSTIVE!
                 "match_level": match_level,
                 "overall_level": overall_level
             },
-            "processing_time_seconds": round(processing_time, 2)
+            "processing_time_seconds": round(processing_time, 2),
+            "from_cache": False
         }
+        
+        # Cache the result
+        set_cached_generation(cache_key, result)
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating user stories: {str(e)}")
 
@@ -509,6 +607,14 @@ async def convert_to_test_cases(request: ConvertTestCaseRequest, document_id: st
         
         if not request.user_story_text.strip():
             raise HTTPException(status_code=400, detail="User story text is required")
+        
+        # Check cache first
+        cache_key = get_cache_key(document_id, "test_cases", request.user_story_text, request.model)
+        cached_result = get_cached_generation(cache_key)
+        if cached_result:
+            cached_result["from_cache"] = True
+            return cached_result
+        
         qa_chain = get_or_create_qa_chain(document_id, request.model)
         print(f"[MODEL] convert_to_test_cases doc={document_id} model={request.model}")
         
@@ -561,7 +667,7 @@ IMPORTANT: Do NOT include trailing commas before closing brackets or braces.
         overall_level, _ = get_confidence_category(overall_score)
         parsed, parse_error = parse_json_output(response['result'])
 
-        return {
+        result = {
             "test_cases": parsed,
             "parse_error": parse_error,
             "quality_assessment": {
@@ -572,7 +678,13 @@ IMPORTANT: Do NOT include trailing commas before closing brackets or braces.
                 "match_level": match_level,
                 "overall_level": overall_level
             },
-            "processing_time_seconds": round(processing_time, 2)
+            "processing_time_seconds": round(processing_time, 2),
+            "from_cache": False
+        }
+        
+        # Cache the result
+        set_cached_generation(cache_key, result)
+        return result
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error converting to test cases: {str(e)}")
