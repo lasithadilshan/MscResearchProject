@@ -6,19 +6,16 @@ import re
 import time
 from io import BytesIO
 
-import numpy as np
 import pandas as pd
 import pdfplumber
 import pptx
 import toml
 from docx import Document
-from fastapi import BackgroundTasks, FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
 from langchain.chains.retrieval_qa.base import RetrievalQA
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel
@@ -42,22 +39,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Get API keys from secrets.toml file
+# Get API key from secrets.toml file
 secrets_path = os.path.join(os.path.dirname(__file__), ".streamlit", "secrets.toml")
 try:
     secrets = toml.load(secrets_path)
     OPENAI_API_KEY = secrets.get("OPENAI_API_KEY")
-    GOOGLE_API_KEY = secrets.get("GOOGLE_API_KEY")
 except FileNotFoundError:
     raise ValueError(f"secrets.toml file not found at {secrets_path}")
 except Exception as e:
     raise ValueError(f"Error reading secrets.toml: {str(e)}")
 
-if not OPENAI_API_KEY or not GOOGLE_API_KEY:
-    raise ValueError("OPENAI_API_KEY and GOOGLE_API_KEY must be set in .streamlit/secrets.toml file")
+if not OPENAI_API_KEY:
+    raise ValueError("OPENAI_API_KEY must be set in .streamlit/secrets.toml file")
 
 os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
-os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
+
+# Default model configuration
+DEFAULT_MODEL = "Open AI GPT 4.1"
 
 # Performance optimization settings for M4 MacBook Air (CPU-only)
 RETRIEVE_TOP_K = 2  # Reduce from 4 to 2 for faster retrieval
@@ -76,7 +74,7 @@ os.makedirs(GENERATION_CACHE_DIR, exist_ok=True)
 generation_cache = {}
 
 
-def get_cache_key(document_id: str, artifact_type: str, input_text: str, model: str) -> str:
+def get_cache_key(document_id: str, artifact_type: str, input_text: str, model: str = DEFAULT_MODEL) -> str:
     """Generate cache key from input parameters."""
     input_hash = hashlib.md5(input_text.encode()).hexdigest()[:16]
     return f"{document_id}_{artifact_type}_{model}_{input_hash}"
@@ -125,23 +123,16 @@ def set_cached_generation(cache_key: str, result: dict) -> None:
 
 
 # Pydantic models for request/response
-class GenerateUserStoriesRequest(BaseModel):
-    model: str = "Open AI GPT 4.1"
-
-
 class ConvertTestCaseRequest(BaseModel):
     user_story_text: str
-    model: str = "Open AI GPT 4.1"
 
 
 class ConvertCucumberRequest(BaseModel):
     test_case_text: str
-    model: str = "Open AI GPT 4.1"
 
 
 class ConvertSeleniumRequest(BaseModel):
     test_case_text: str
-    model: str = "Open AI GPT 4.1"
 
 
 class QualityAssessmentResponse(BaseModel):
@@ -175,22 +166,21 @@ def parse_json_output(text: str):
         return clean, str(e)
 
 
-def get_or_create_qa_chain(document_id: str, model_selection: str) -> RetrievalQA:
-    """Ensure QA chain uses the requested model; rebuild if model changed."""
+def get_or_create_qa_chain(document_id: str) -> RetrievalQA:
+    """Ensure QA chain exists for the document using the default model."""
     if document_id not in uploaded_documents or document_id not in vector_stores:
         raise HTTPException(status_code=404, detail="Document not found. Please upload a document first.")
 
-    stored_model = uploaded_documents[document_id].get("model")
-    if stored_model != model_selection or document_id not in qa_chains:
-        llm = initialize_llm(model_selection)
+    if document_id not in qa_chains:
+        llm = initialize_llm()
         qa_chain = RetrievalQA.from_chain_type(
             llm=llm,
             chain_type="stuff",
             retriever=vector_stores[document_id].as_retriever(search_kwargs={"k": RETRIEVE_TOP_K})
         )
         qa_chains[document_id] = qa_chain
-        uploaded_documents[document_id]["model"] = model_selection
-        print(f"[QA_CHAIN] Rebuilt for doc={document_id} model={model_selection}")
+        uploaded_documents[document_id]["model"] = DEFAULT_MODEL
+        print(f"[QA_CHAIN] Initialized for doc={document_id} model={DEFAULT_MODEL}")
     return qa_chains[document_id]
 
 
@@ -327,24 +317,15 @@ def create_vector_store(text: str) -> FAISS:
     return FAISS.from_texts(chunks, embeddings)
 
 
-# Initialize LLM based on model selection
-def initialize_llm(model_selection: str):
-    """Initialize and return the appropriate LLM with optimized parameters."""
-    if model_selection == "Open AI GPT 4.1":
-        return ChatOpenAI(
-            model="gpt-4.1",
-            temperature=0.5,
-            max_tokens=MAX_OUTPUT_TOKENS,
-            request_timeout=GENERATION_TIMEOUT_SECONDS,
-        )
-    elif model_selection == "Google Gemini 2.0 Flash":
-        return ChatGoogleGenerativeAI(
-            model="gemini-2.0-flash",
-            temperature=0.7,
-            max_output_tokens=MAX_OUTPUT_TOKENS,
-        )
-    else:
-        raise ValueError("Invalid model selection. Choose 'Open AI GPT 4.1' or 'Google Gemini 2.0 Flash'")
+# Initialize LLM (OpenAI only)
+def initialize_llm():
+    """Initialize and return the OpenAI LLM with optimized parameters."""
+    return ChatOpenAI(
+        model="gpt-4.1",
+        temperature=0.5,
+        max_tokens=MAX_OUTPUT_TOKENS,
+        request_timeout=GENERATION_TIMEOUT_SECONDS,
+    )
 
 
 # API Endpoints
@@ -368,7 +349,7 @@ async def root():
 
 
 @app.post("/upload-document")
-async def upload_document(file: UploadFile = File(...), model: str = "Open AI GPT 4.1"):
+async def upload_document(file: UploadFile = File(...)):
     """Upload a BRD document and initialize the QA chain."""
     try:
         # Read file content
@@ -386,7 +367,7 @@ async def upload_document(file: UploadFile = File(...), model: str = "Open AI GP
             "filename": file.filename,
             "text": text,
             "upload_time": time.time(),
-            "model": model
+            "model": DEFAULT_MODEL
         }
         
         # Check if vector store exists on disk; load or create
@@ -403,7 +384,7 @@ async def upload_document(file: UploadFile = File(...), model: str = "Open AI GP
         vector_stores[document_id] = vector_store
         
         # Initialize LLM and QA chain
-        llm = initialize_llm(model)
+        llm = initialize_llm()
         qa_chain = RetrievalQA.from_chain_type(
             llm=llm,
             chain_type="stuff",
@@ -416,7 +397,7 @@ async def upload_document(file: UploadFile = File(...), model: str = "Open AI GP
             "document_id": document_id,
             "filename": file.filename,
             "text_length": len(text),
-            "model": model,
+            "model": DEFAULT_MODEL,
             "vector_store_load_time_seconds": round(load_time, 2)
         }
     except Exception as e:
@@ -424,7 +405,7 @@ async def upload_document(file: UploadFile = File(...), model: str = "Open AI GP
 
 
 @app.post("/generate-user-stories")
-async def generate_user_stories(request: GenerateUserStoriesRequest, document_id: str):
+async def generate_user_stories(document_id: str):
     """Generate user stories from uploaded BRD document."""
     try:
         if document_id not in qa_chains:
@@ -432,14 +413,14 @@ async def generate_user_stories(request: GenerateUserStoriesRequest, document_id
         
         # Check cache first
         text = uploaded_documents[document_id]["text"]
-        cache_key = get_cache_key(document_id, "user_stories", text, request.model)
+        cache_key = get_cache_key(document_id, "user_stories", text)
         cached_result = get_cached_generation(cache_key)
         if cached_result:
             cached_result["from_cache"] = True
             return cached_result
         
-        qa_chain = get_or_create_qa_chain(document_id, request.model)
-        print(f"[MODEL] generate_user_stories doc={document_id} model={request.model}")
+        qa_chain = get_or_create_qa_chain(document_id)
+        print(f"[MODEL] generate_user_stories doc={document_id} model={DEFAULT_MODEL}")
         
         prompt_message = """
 You are an Expert Business Analyst with 20+ years of experience in requirements engineering and Agile transformation.
@@ -608,14 +589,14 @@ async def convert_to_test_cases(request: ConvertTestCaseRequest, document_id: st
             raise HTTPException(status_code=400, detail="User story text is required")
         
         # Check cache first
-        cache_key = get_cache_key(document_id, "test_cases", request.user_story_text, request.model)
+        cache_key = get_cache_key(document_id, "test_cases", request.user_story_text)
         cached_result = get_cached_generation(cache_key)
         if cached_result:
             cached_result["from_cache"] = True
             return cached_result
         
-        qa_chain = get_or_create_qa_chain(document_id, request.model)
-        print(f"[MODEL] convert_to_test_cases doc={document_id} model={request.model}")
+        qa_chain = get_or_create_qa_chain(document_id)
+        print(f"[MODEL] convert_to_test_cases doc={document_id} model={DEFAULT_MODEL}")
         
         test_case_prompt = """
 You are a highly experienced Senior QA Engineer with over 15 years of expertise in software testing and quality assurance.
@@ -697,8 +678,8 @@ async def convert_to_cucumber(request: ConvertCucumberRequest, document_id: str)
         
         if not request.test_case_text.strip():
             raise HTTPException(status_code=400, detail="Test case text is required")
-        qa_chain = get_or_create_qa_chain(document_id, request.model)
-        print(f"[MODEL] convert_to_cucumber doc={document_id} model={request.model}")
+        qa_chain = get_or_create_qa_chain(document_id)
+        print(f"[MODEL] convert_to_cucumber doc={document_id} model={DEFAULT_MODEL}")
         
         cucumber_prompt = """You are a BDD expert. Convert the test case into professional Cucumber Gherkin format.
 
@@ -764,8 +745,8 @@ async def convert_to_selenium(request: ConvertSeleniumRequest, document_id: str)
         
         if not request.test_case_text.strip():
             raise HTTPException(status_code=400, detail="Test case text is required")
-        qa_chain = get_or_create_qa_chain(document_id, request.model)
-        print(f"[MODEL] convert_to_selenium doc={document_id} model={request.model}")
+        qa_chain = get_or_create_qa_chain(document_id)
+        print(f"[MODEL] convert_to_selenium doc={document_id} model={DEFAULT_MODEL}")
         
         selenium_prompt = """You are a Senior Test Automation Engineer specializing in Selenium and Python. Convert the following test case into a robust, production-ready Selenium WebDriver script in Python.
 

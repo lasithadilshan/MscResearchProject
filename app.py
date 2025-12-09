@@ -1,12 +1,7 @@
 import os
-import re
-import time
 
-import numpy as np
-import pandas as pd
 import requests
 import streamlit as st
-from docx import Document
 
 st.set_page_config(
     page_title="SDLC Automate APP",
@@ -15,7 +10,6 @@ st.set_page_config(
 
 # Get the API key from Streamlit secrets
 os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
-os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
 
 # FastAPI backend URL
 API_URL = "http://127.0.0.1:8000"
@@ -23,24 +17,7 @@ API_URL = "http://127.0.0.1:8000"
 # Streamlit sidebar setup
 with st.sidebar:
     st.title("Your BRD Documents")
-    model_selection = st.selectbox(
-        "Select AI Model",
-        options=["Open AI GPT 4.1", "Google Gemini 2.0 Flash"]
-    )
-    st.write(f"Selected Model: {model_selection}")
     uploaded_file = st.file_uploader("Upload a file to generate user stories", type=["pdf", "docx", "txt", "xlsx", "pptx"])
-
-# Track model selection changes to invalidate cached document/results when switching models
-if "model_selection" not in st.session_state:
-    st.session_state["model_selection"] = model_selection
-
-if model_selection != st.session_state.get("model_selection"):
-    # Clear cached document and generated outputs because model changed
-    st.session_state["document_info"] = None
-    st.session_state["user_stories_result"] = None
-    st.session_state["user_stories_quality"] = None
-    st.session_state["user_stories_time"] = None
-    st.session_state["model_selection"] = model_selection
 
 # Streamlit app setup
 st.header("BRD to User Story, Test Case, Cucumber Script, and Selenium Script")
@@ -49,11 +26,10 @@ st.header("BRD to User Story, Test Case, Cucumber Script, and Selenium Script")
 tab1, tab2, tab3, tab4 = st.tabs(["User Story Generation", "User Story to Test Case", "Test Case to Cucumber Script", "Test Case to Selenium Script"])
 
 # Helper function to upload file to backend
-def upload_file_to_backend(uploaded_file, model_selection):
+def upload_file_to_backend(uploaded_file):
     if uploaded_file:
         files = {"file": (uploaded_file.name, uploaded_file, uploaded_file.type)}
-        data = {"model": model_selection}
-        response = requests.post(f"{API_URL}/upload-document", files=files, data=data)
+        response = requests.post(f"{API_URL}/upload-document", files=files)
         if response.status_code == 200:
             return response.json()
         else:
@@ -73,13 +49,12 @@ if "document_info" not in st.session_state:
 
 document_info = st.session_state.get("document_info")
 if uploaded_file:
-    # Only upload when the file or selected model changes; reuse existing document_id otherwise
+    # Only upload when the file changes; reuse existing document_id otherwise
     current_filename = uploaded_file.name
     cached_info = st.session_state.get("document_info")
     cached_filename = cached_info.get("filename") if cached_info else None
-    cached_model = cached_info.get("model") if cached_info else None
-    if current_filename != cached_filename or model_selection != cached_model:
-        document_info = upload_file_to_backend(uploaded_file, model_selection)
+    if current_filename != cached_filename:
+        document_info = upload_file_to_backend(uploaded_file)
         st.session_state["document_info"] = document_info
     else:
         document_info = cached_info
@@ -96,8 +71,7 @@ with tab1:
     if document_info:
         document_id = document_info["document_id"]
         if st.button("Generate User Stories"):
-            payload = {"model": model_selection}
-            response = requests.post(f"{API_URL}/generate-user-stories?document_id={document_id}", json=payload)
+            response = requests.post(f"{API_URL}/generate-user-stories?document_id={document_id}")
             if response.status_code == 200:
                 result = response.json()
                 st.session_state["user_stories_result"] = result.get("user_stories")
@@ -125,7 +99,7 @@ with tab2:
     st.subheader("Convert User Story to Test Case")
     user_story_text = st.text_area("Enter the user story text here to generate test cases:")
     if document_info and st.button("Generate Test Cases"):
-        payload = {"user_story_text": user_story_text, "model": model_selection}
+        payload = {"user_story_text": user_story_text}
         document_id = document_info["document_id"]
         response = requests.post(f"{API_URL}/convert-to-test-cases?document_id={document_id}", json=payload)
         if response.status_code == 200:
@@ -149,7 +123,7 @@ with tab3:
     st.subheader("Convert Test Case to Cucumber Script")
     test_case_text = st.text_area("Enter the test case text here to generate Cucumber script:")
     if document_info and st.button("Generate Cucumber Script"):
-        payload = {"test_case_text": test_case_text, "model": model_selection}
+        payload = {"test_case_text": test_case_text}
         document_id = document_info["document_id"]
         response = requests.post(f"{API_URL}/convert-to-cucumber?document_id={document_id}", json=payload)
         if response.status_code == 200:
@@ -169,7 +143,7 @@ with tab4:
     st.subheader("Convert Test Case to Selenium Script")
     selenium_test_case_text = st.text_area("Enter the test case text here to generate Selenium script:")
     if document_info and st.button("Generate Selenium Script"):
-        payload = {"test_case_text": selenium_test_case_text, "model": model_selection}
+        payload = {"test_case_text": selenium_test_case_text}
         document_id = document_info["document_id"]
         response = requests.post(f"{API_URL}/convert-to-selenium?document_id={document_id}", json=payload)
         if response.status_code == 200:

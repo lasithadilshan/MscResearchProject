@@ -14,7 +14,6 @@ pydantic-core==2.41.5
 # LLM and NLP Libraries
 langchain==0.3.0
 langchain-openai==0.3.12
-langchain-google-genai==2.1.2
 langchain-huggingface==0.1.2
 langchain-community==0.3.0
 langchain-core==0.3.50
