@@ -58,8 +58,8 @@ os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 DEFAULT_MODEL = "Open AI GPT 4.1"
 
 # Performance optimization settings for M4 MacBook Air (CPU-only)
-RETRIEVE_TOP_K = 2  # Reduce from 4 to 2 for faster retrieval
-CHUNK_SIZE = 1000  # Optimized for CPU
+RETRIEVE_TOP_K = 6  # Fetch more chunks to improve coverage
+CHUNK_SIZE = 1200  # Slightly larger chunks for richer context
 CHUNK_OVERLAP = 200  # Better context preservation
 MAX_OUTPUT_TOKENS = 800  # Cap LLM output for speed
 GENERATION_TIMEOUT_SECONDS = 45  # Timeout for LLM calls
