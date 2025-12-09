@@ -61,7 +61,7 @@ DEFAULT_MODEL = "Open AI GPT 4.1"
 RETRIEVE_TOP_K = 6  # Fetch more chunks to improve coverage
 CHUNK_SIZE = 1200  # Slightly larger chunks for richer context
 CHUNK_OVERLAP = 200  # Better context preservation
-MAX_OUTPUT_TOKENS = 800  # Cap LLM output for speed
+MAX_OUTPUT_TOKENS = None  # Unlimited response length (may increase cost)
 GENERATION_TIMEOUT_SECONDS = 45  # Timeout for LLM calls
 VECTOR_STORE_DIR = "./vector_stores"  # Persist FAISS to disk
 GENERATION_CACHE_DIR = "./generation_cache"  # Cache generated artifacts
@@ -323,7 +323,6 @@ def initialize_llm():
     return ChatOpenAI(
         model="gpt-4.1",
         temperature=0.5,
-        max_tokens=MAX_OUTPUT_TOKENS,
         request_timeout=GENERATION_TIMEOUT_SECONDS,
     )
 
