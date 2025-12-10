@@ -678,31 +678,113 @@ async def convert_to_cucumber(request: ConvertCucumberRequest, document_id: str)
         qa_chain = get_or_create_qa_chain(document_id)
         print(f"[MODEL] convert_to_cucumber doc={document_id} model={DEFAULT_MODEL}")
         
-        cucumber_prompt = """You are a BDD expert. Convert the test case into professional Cucumber Gherkin format.
+        cucumber_prompt = """
+You are an expert test automation engineer specializing in BDD and Cucumber.
+Follow Cucumber best practices and Gherkin syntax as described in the official documentation (features, scenarios, backgrounds, tags, step definitions, hooks, data tables, doc strings).
 
-TEST CASE:
+Your task is to transform the following test cases into a complete, production-ready Cucumber test suite.
+
+## INPUT TEST CASES
+Convert these test cases into Cucumber artifacts:
 """ + request.test_case_text + """
 
-INSTRUCTIONS:
-1. Start with 'Feature:' for business capability
-2. Add 'Scenario:' for each test case
-3. Use Given/When/Then format
-4. Use 'And' for additional steps
-5. Add @tags for @automated, @regression, @smoke
-6. Include realistic test data
-7. Cover happy path and error scenarios
+## STRICT GHERKIN AND CUCUMBER RULES
 
-FORMAT:
-Feature: [Business capability]
-  Scenario: [Test scenario name]
-    Given [precondition]
-      And [more preconditions]
-    When [user action]
-      And [more actions]
-    Then [expected result]
-      And [assertions]
+1. General Gherkin rules
+- Use only these step keywords: Feature, Background, Scenario, Scenario Outline, Examples, Given, When, Then, And, But.
+- Steps must be written in business-readable language (no implementation details).
+- Each Scenario must be independent and executable in isolation.
+- Keep steps short, clear, and describing behavior, not UI mechanics.
+- Avoid duplication by reusing generic steps across scenarios.
 
-Generate ONLY Gherkin code, no explanations."""
+2. Feature file structure
+Generate EXACTLY ONE complete feature file.
+
+It MUST include:
+- A concise, meaningful Feature name.
+- A short description (business value and context).
+- A Background section ONLY if there are common preconditions shared by most scenarios.
+- Multiple Scenarios that cover ALL provided test cases.
+- Use Scenario Outline + Examples where the same workflow is repeated with different data.
+- Use tags to organize scenarios:
+  - @smoke for core happy paths
+  - @regression for wider coverage
+  - @critical for high‑risk or business‑critical flows
+- Use Given for preconditions, When for actions, Then for verifications.
+- Use And / But only to extend the previous Given/When/Then step when it improves readability.
+- Use Data Tables for structured multi-field inputs or outputs.
+- Use Doc Strings (\"\"\" ... \"\"\") for larger text payloads if appropriate.
+
+3. Scenario quality
+- Include both positive and negative scenarios where test cases imply them.
+- Make each scenario self-explanatory from a business perspective.
+- Prefer reusing generic, parameterized steps (e.g. "I enter \"<username>\" in the username field").
+- Avoid referencing UI technology (like “click the blue React button”), keep it domain-focused.
+
+## STEP DEFINITIONS (JAVA, CUCUMBER-JVM)
+
+Create Java step definitions aligned with the feature file:
+
+1. Structure and imports
+- Use a realistic package name, e.g. `package steps;`
+- Include typical imports (do not reference any specific project framework beyond Selenium + Cucumber + JUnit/TestNG style assertions), for example:
+  - Cucumber: io.cucumber.java.{en.Given, en.When, en.Then, en.And, Before, After}
+  - Selenium: org.openqa.selenium.*
+  - Selenium support: org.openqa.selenium.support.ui.WebDriverWait, ExpectedConditions
+  - Assertions: org.junit.jupiter.api.Assertions or org.testng.Assert
+  - Logging: java.util.logging.Logger or similar
+
+2. Implementation rules
+- Each Gherkin step must have a matching annotated Java method:
+  - @Given("...")
+  - @When("...")
+  - @Then("...")
+  - @And("...")
+- Use parameterized step definitions with capture groups and/or Cucumber expression parameters, for example:
+  - @When("I enter {string} in the username field")
+- Use Page Object Model (POM) style:
+  - Assume there are page classes like LoginPage, DashboardPage, etc.
+  - Interact with the UI only via page objects (no raw locators in the step class where possible).
+- Use explicit waits (WebDriverWait) instead of Thread.sleep.
+- Add clear comments for any non-trivial logic.
+- Include meaningful assertions that verify outcomes described in the Then steps.
+- Include basic error handling where appropriate and log key events.
+
+3. Hooks and test lifecycle
+- Add @Before hook to initialize WebDriver, open the application, and any common test setup needed.
+- Add @After hook to close/quit the browser and clean up state.
+- Keep hooks generic and reusable across scenarios.
+
+4. Data handling
+- Support Cucumber DataTable in step definitions when scenarios use tables:
+  - Convert DataTable to Map/List or custom objects as appropriate.
+- Handle Doc Strings when present as method parameters (String body).
+
+## OUTPUT FORMAT (STRICT)
+
+Generate output EXACTLY in the following structure, with no extra sections, text, or explanations:
+
+**FEATURE FILE (FeatureName.feature):**
+```gherkin
+[Complete feature file content here]
+```
+
+**STEP DEFINITIONS (FeatureSteps.java):**
+```java
+[Complete Java step definitions here]
+```
+
+**TEST DATA NOTES:**
+[Concise recommendations for test data management, e.g. using external files, environment-specific data, anonymized production-like data]
+
+**EXECUTION NOTES:**
+[Short notes on how to run these tests with Cucumber + Java + Selenium, including any dependencies or runner configuration assumptions]
+
+Constraints:
+- Do NOT output any markdown outside the specified code fences and sections.
+- Ensure the Gherkin is syntactically valid and would be accepted by Cucumber.
+- Ensure every test case from the input is covered by at least one scenario or scenario outline.
+"""
         
         start_time = time.time()
         response = qa_chain.invoke({"query": cucumber_prompt})

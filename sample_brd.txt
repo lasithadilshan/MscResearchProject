@@ -1,0 +1,6 @@
+BRD: Login System
+        1. The system shall allow users to login using Email and Password.
+        2. The system shall support Two-Factor Authentication (2FA) via SMS.
+        3. Passwords must be at least 12 characters long.
+        4. Admin users should be able to reset user passwords.
+        

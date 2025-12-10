@@ -25,6 +25,38 @@ st.header("BRD to User Story, Test Case, Cucumber Script, and Selenium Script")
 # Set up tabs for different functionalities
 tab1, tab2, tab3, tab4 = st.tabs(["User Story Generation", "User Story to Test Case", "Test Case to Cucumber Script", "Test Case to Selenium Script"])
 
+
+def render_user_story_cards(stories):
+    """Render user stories as cards for readability."""
+    if isinstance(stories, dict) and "user_stories" in stories:
+        stories = stories.get("user_stories", [])
+
+    if not isinstance(stories, list):
+        st.write(stories)
+        return
+
+    for story in stories:
+        with st.container(border=True):
+            st.markdown(f"**{story.get('id', 'Story')} – {story.get('title', '')}**")
+            st.write(story.get("story", ""))
+
+            ac = story.get("acceptance_criteria", [])
+            if ac:
+                st.caption("Acceptance Criteria")
+                for item in ac:
+                    st.write(f"- {item}")
+
+            meta_cols = st.columns(3)
+            meta_cols[0].metric("Priority", story.get("priority", ""))
+            meta_cols[1].metric("Points", story.get("story_points", ""))
+            meta_cols[2].write(f"Category: {story.get('category', '')}")
+
+            notes = story.get("notes", [])
+            if notes:
+                st.caption("Notes")
+                for note in notes:
+                    st.write(f"• {note}")
+
 # Helper function to upload file to backend
 def upload_file_to_backend(uploaded_file):
     if uploaded_file:
@@ -87,7 +119,7 @@ with tab1:
                 st.warning("The model returned non-JSON output; showing raw text. Parse error: " + str(st.session_state["user_stories_parse_error"]))
                 st.code(str(st.session_state["user_stories_result"]), language="json")
             else:
-                st.json(st.session_state["user_stories_result"])
+                render_user_story_cards(st.session_state["user_stories_result"])
             st.subheader("Quality Assessment")
             st.json(st.session_state["user_stories_quality"])
             st.write(f"Processing time: {st.session_state['user_stories_time']} seconds")
