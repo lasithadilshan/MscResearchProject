@@ -64,3 +64,5 @@ ruff_cache/
 # Docker
 docker-compose.override.yml
 *.tmp
+
+vector_stores/
