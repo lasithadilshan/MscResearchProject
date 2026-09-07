@@ -71,47 +71,155 @@ def get_confidence_category(percentage: float):
 
 # Prompt constants
 USER_STORY_PROMPT = """
-You are an Expert Business Analyst. Your responsibility is to read the entire Business Requirement Document (BRD) below and convert it into detailed User Stories.
+You are an Expert Business Analyst with 20+ years of experience in requirements engineering and Agile transformation.
 
-Think step-by-step and ensure you extract EVERY POSSIBLE user story derived from the BRD.
-DO NOT summarize or skip any functionality. Provide fully complete User Stories only.
+CRITICAL INSTRUCTION: Extract EVERY POSSIBLE user story from the BRD below. No requirement should be missed.
 
-## DOCUMENT:
+## DOCUMENT TO ANALYZE:
 {context}
 
+## EXTRACTION METHODOLOGY:
+
+### PHASE 1: Comprehensive Requirement Mining
+1. **Functional Requirements**: Extract ALL features, capabilities, and system behaviors mentioned
+2. **User Interactions**: Identify EVERY user action, input, output, and workflow step
+3. **Business Rules**: Capture ALL validation rules, constraints, and business logic
+4. **Data Requirements**: Extract ALL data fields, entities, relationships, and transformations
+5. **Integration Points**: Identify ALL system interfaces, APIs, and external dependencies
+6. **Non-Functional Requirements**: Include performance, security, usability, accessibility needs
+7. **Reporting & Analytics**: Extract ALL reporting, monitoring, and analytical capabilities
+8. **Administrative Functions**: Capture ALL configuration, setup, and maintenance features
+9. **Error Scenarios**: Include ALL error handling, validation, and recovery scenarios
+10. **Compliance & Audit**: Extract ALL regulatory, compliance, and audit trail requirements
+
+### PHASE 2: User Story Generation Rules
+
+**MANDATORY FORMAT**: "As a [specific role], I want [specific feature/action] so that [measurable business value]"
+
+**Story Categorization** (Generate stories for EACH category where applicable):
+- **Core Features**: Primary business functions
+- **CRUD Operations**: Create, Read, Update, Delete for each entity
+- **Search & Filter**: All search, filter, sort capabilities
+- **Validation & Rules**: Input validation, business rule enforcement
+- **Workflow & Process**: Multi-step processes, approvals, state transitions
+- **Notifications & Alerts**: Email, SMS, in-app notifications
+- **Reports & Exports**: All reporting and data export features
+- **Security & Access**: Authentication, authorization, role management
+- **Integration**: External system interactions, API calls
+- **Configuration**: System settings, preferences, customization
+- **Audit & Compliance**: Logging, tracking, compliance features
+- **Error Handling**: Error recovery, rollback, exception scenarios
+- **Performance**: Load handling, response time, scalability
+- **Mobile/Responsive**: Device-specific features
+- **Accessibility**: Support for users with disabilities
+
+**Acceptance Criteria Requirements**:
+- Minimum 3-5 criteria per story
+- Use strict Gherkin format: Given [context], When [action], Then [outcome]
+- Include: Happy path, Error scenarios, Boundary conditions, Business rules
+- Reference specific data fields, values, and thresholds from the BRD
+
+**Priority Assignment Logic**:
+- "Critical": Core business functions, regulatory requirements, security
+- "High": Primary user workflows, key features
+- "Medium": Secondary features, enhancements
+- "Low": Nice-to-have, future considerations
+
+**Story Sizing Guidance**:
+- Break complex features into multiple smaller stories
+- Each story should be completable in 1-3 days
+- Use vertical slicing (end-to-end functionality)
+
+### PHASE 3: Quality Checks
+
+**Ensure EVERY story has**:
+1. Unique sequential ID (US_001, US_002, ...)
+2. Clear, specific, searchable title
+3. Complete user story statement with role, feature, and value
+4. 3-5 detailed acceptance criteria covering multiple scenarios
+5. Realistic priority based on business impact
+6. Relevant technical and business notes
+
+**Extraction Completeness Verification**:
+- Every paragraph in the BRD should generate at least one user story
+- Every user role mentioned should appear in multiple stories
+- Every data field should have CRUD stories
+- Every business rule should have validation stories
+- Every integration point should have connection stories
+
+### OUTPUT REQUIREMENTS:
+
 Return ONLY valid JSON (no markdown, no explanations):
+
 {{
   "user_stories": [
     {{
       "id": "US_001",
-      "title": "[Title]",
-      "story": "As a [role], I want [feature] so that [value]",
-      "acceptance_criteria": ["Given [context], when [action], then [outcome]"],
-      "priority": "High",
-      "story_points": 5,
-      "category": "Core",
-      "notes": []
+      "title": "[Specific, searchable title from BRD content]",
+      "story": "As a [specific role from BRD], I want [specific feature from BRD] so that [specific value from BRD]",
+      "acceptance_criteria": [
+        "Given [specific context from BRD], when [specific action], then [specific outcome with data/thresholds]",
+        "Given [error scenario], when [invalid action], then [error handling from BRD]",
+        "Given [edge case], when [boundary condition], then [expected behavior]",
+        "Given [business rule from BRD], when [rule trigger], then [rule enforcement]",
+        "Given [performance requirement], when [load condition], then [performance metric]"
+      ],
+      "priority": "[Critical/High/Medium/Low]",
+      "story_points": [1-13],
+      "category": "[category_name]",
+      "notes": [
+        "Affected users: [specific roles from BRD]",
+        "Related module: [specific module/component from BRD]",
+        "Dependencies: [specific systems/features from BRD]",
+        "Data entities: [specific entities from BRD]",
+        "Business rules: [specific rules from BRD]"
+      ]
     }}
   ]
 }}
+
+IMPORTANT RULES:
+1. Generate AT LEAST 25-30 stories for a typical BRD
+2. Use EXACT terminology, field names, and values from the BRD
+3. NO generic placeholders - use specific BRD content
+4. NO trailing commas in JSON
+5. EVERY requirement in the BRD must be covered
+6. Include negative scenarios and edge cases
+7. Ensure technical accuracy and business relevance
+
+BEGIN EXTRACTION NOW - BE EXHAUSTIVE!
 """
 
 TEST_CASE_PROMPT = """
-You are a Senior QA Engineer. Design a comprehensive test suite for the following user story:
+You are a highly experienced Senior QA Engineer with over 15 years of expertise in software testing and quality assurance.
 
-## USER STORY:
+Your responsibility is to design a comprehensive test suite for the following user story:
+
+
 {input_text}
 
-Return ONLY valid JSON (no markdown):
+
+Provide professional, detailed, and well-structured test cases based on the following functional and non-functional requirements:
+
+### Scope of Test Cases:
+- Include **positive**, **negative**, **edge**, **database related where applicable**, and **alternative** scenarios.
+- Address **input validation**, **error handling**, **security**, **usability**, **performance**, **exploratory**, **exceptional**, and **compatibility** (where applicable).
+- Ensure all test cases are **independent**, **clear**, and **suitable for automation**.
+- Use **realistic and meaningful** test data.
+
+### Output Format:
+Respond in **valid JSON only** using the following structure.
+IMPORTANT: Do NOT include trailing commas before closing brackets or braces.
+
 {{
   "test_cases": [
     {{
       "id": "TC_001",
-      "title": "Title",
-      "preconditions": ["Precondition"],
-      "test_data": ["data: value"],
-      "test_steps": ["1. Step"],
-      "expected_results": ["Result"],
+      "title": "Generate a descriptive title",
+      "preconditions": ["Precondition 1", "Precondition 2"],
+      "test_data": ["data_field_1: value_1"],
+      "test_steps": ["1. Step description"],
+      "expected_results": ["Expected result"],
       "priority": "High",
       "attachments": []
     }}
@@ -120,33 +228,136 @@ Return ONLY valid JSON (no markdown):
 """
 
 CUCUMBER_PROMPT = """
-You are an expert test automation engineer. Transform these test cases into a complete Cucumber test suite.
+You are an expert test automation engineer specializing in BDD and Cucumber.
+Follow Cucumber best practices and Gherkin syntax as described in the official documentation (features, scenarios, backgrounds, tags, step definitions, hooks, data tables, doc strings).
 
-## TEST CASES:
+Your task is to transform the following test cases into a complete, production-ready Cucumber test suite.
+
+## INPUT TEST CASES
+Convert these test cases into Cucumber artifacts:
+
 {input_text}
+
+
+## STRICT GHERKIN AND CUCUMBER RULES
+
+1. General Gherkin rules
+- Use only these step keywords: Feature, Background, Scenario, Scenario Outline, Examples, Given, When, Then, And, But.
+- Steps must be written in business-readable language (no implementation details).
+- Each Scenario must be independent and executable in isolation.
+- Keep steps short, clear, and describing behavior, not UI mechanics.
+- Avoid duplication by reusing generic steps across scenarios.
+
+2. Feature file structure
+Generate EXACTLY ONE complete feature file.
+
+It MUST include:
+- A concise, meaningful Feature name.
+- A short description (business value and context).
+- A Background section ONLY if there are common preconditions shared by most scenarios.
+- Multiple Scenarios that cover ALL provided test cases.
+- Use Scenario Outline + Examples where the same workflow is repeated with different data.
+- Use tags to organize scenarios:
+  - @smoke for core happy paths
+  - @regression for wider coverage
+  - @critical for high‑risk or business‑critical flows
+- Use Given for preconditions, When for actions, Then for verifications.
+- Use And / But only to extend the previous Given/When/Then step when it improves readability.
+- Use Data Tables for structured multi-field inputs or outputs.
+- Use Doc Strings (\"\"\" ... \"\"\") for larger text payloads if appropriate.
+
+3. Scenario quality
+- Include both positive and negative scenarios where test cases imply them.
+- Make each scenario self-explanatory from a business perspective.
+- Prefer reusing generic, parameterized steps (e.g. "I enter \"<username>\" in the username field").
+- Avoid referencing UI technology (like “click the blue React button”), keep it domain-focused.
+
+## STEP DEFINITIONS (JAVA, CUCUMBER-JVM)
+
+Create Java step definitions aligned with the feature file:
+
+1. Structure and imports
+- Use a realistic package name, e.g. `package steps;`
+- Include typical imports (do not reference any specific project framework beyond Selenium + Cucumber + JUnit/TestNG style assertions), for example:
+  - Cucumber: io.cucumber.java.{{en.Given, en.When, en.Then, en.And, Before, After}}
+  - Selenium: org.openqa.selenium.*
+  - Selenium support: org.openqa.selenium.support.ui.WebDriverWait, ExpectedConditions
+  - Assertions: org.junit.jupiter.api.Assertions or org.testng.Assert
+  - Logging: java.util.logging.Logger or similar
+
+2. Implementation rules
+- Each Gherkin step must have a matching annotated Java method:
+  - @Given("...")
+  - @When("...")
+  - @Then("...")
+  - @And("...")
+- Use parameterized step definitions with capture groups and/or Cucumber expression parameters, for example:
+  - @When("I enter {{string}} in the username field")
+- Use Page Object Model (POM) style:
+  - Assume there are page classes like LoginPage, DashboardPage, etc.
+  - Interact with the UI only via page objects (no raw locators in the step class where possible).
+- Use explicit waits (WebDriverWait) instead of Thread.sleep.
+- Add clear comments for any non-trivial logic.
+- Include meaningful assertions that verify outcomes described in the Then steps.
+- Include basic error handling where appropriate and log key events.
+
+3. Hooks and test lifecycle
+- Add @Before hook to initialize WebDriver, open the application, and any common test setup needed.
+- Add @After hook to close/quit the browser and clean up state.
+- Keep hooks generic and reusable across scenarios.
+
+4. Data handling
+- Support Cucumber DataTable in step definitions when scenarios use tables:
+  - Convert DataTable to Map/List or custom objects as appropriate.
+- Handle Doc Strings when present as method parameters (String body).
+
+## OUTPUT FORMAT (STRICT)
+
+Generate output EXACTLY in the following structure, with no extra sections, text, or explanations:
 
 **FEATURE FILE (FeatureName.feature):**
 ```gherkin
-[content]
+[Complete feature file content here]
 ```
 
 **STEP DEFINITIONS (FeatureSteps.java):**
 ```java
-[content]
+[Complete Java step definitions here]
 ```
+
+**TEST DATA NOTES:**
+[Concise recommendations for test data management, e.g. using external files, environment-specific data, anonymized production-like data]
+
+**EXECUTION NOTES:**
+[Short notes on how to run these tests with Cucumber + Java + Selenium, including any dependencies or runner configuration assumptions]
+
+Constraints:
+- Do NOT output any markdown outside the specified code fences and sections.
+- Ensure the Gherkin is syntactically valid and would be accepted by Cucumber.
+- Ensure every test case from the input is covered by at least one scenario or scenario outline.
 """
 
-SELENIUM_PROMPT = """
-You are an expert test automation engineer. Transform these test cases into a complete Selenium (Python) test script.
+SELENIUM_PROMPT = """You are a Senior Test Automation Engineer specializing in Selenium and Python. Convert the following test case into a robust, production-ready Selenium WebDriver script in Python.
 
-## TEST CASES:
+INSTRUCTIONS:
+- Use best practices for maintainability, reliability, and readability.
+- Include all necessary imports, setup, and teardown logic.
+- Use explicit waits (WebDriverWait) for element interactions, not time.sleep.
+- Add comments for each major step.
+- Validate all expected outcomes with assert statements.
+- Handle exceptions gracefully and log errors.
+- Use Page Object Model if the scenario is complex.
+- Ensure the script is ready to run as a standalone test.
+- Use realistic locators (id, name, xpath, css selector) based on the test case.
+- If data is required, use sample values from the test case.
+- If login or setup is needed, include those steps.
+
+Test Case:
+
 {input_text}
 
-Return the complete python script.
-```python
-[content]
-```
-"""
+
+Return ONLY the complete Python code, no explanations, no markdown."""
 
 def generate_artifact(task_type: str, document_id: str, input_text: str = None) -> dict:
     llm = initialize_llm()
