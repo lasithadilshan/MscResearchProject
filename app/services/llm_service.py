@@ -7,6 +7,8 @@ from app.services.document_service import query_vector_store
 import time
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+from pydantic import BaseModel, Field
+from typing import List, Optional
 
 def initialize_llm():
     return ChatOpenAI(
@@ -15,20 +17,31 @@ def initialize_llm():
         openai_api_key=settings.OPENAI_API_KEY
     )
 
-def parse_json_output(text: str):
-    """Extract JSON from model output, stripping optional code fences."""
-    clean = text.strip()
-    fence = re.search(r"```json\s*(.*?)```", clean, re.DOTALL)
-    if fence:
-        clean = fence.group(1).strip()
-    else:
-        fence = re.search(r"```\s*(.*?)```", clean, re.DOTALL)
-        if fence:
-            clean = fence.group(1).strip()
-    try:
-        return json.loads(clean), None
-    except Exception as e:
-        return clean, str(e)
+class UserStory(BaseModel):
+    id: str = Field(description="Unique sequential ID (US_001, US_002, ...)")
+    title: str = Field(description="Specific, searchable title from BRD content")
+    story: str = Field(description="As a [specific role], I want [feature] so that [value]")
+    acceptance_criteria: List[str] = Field(description="Detailed acceptance criteria covering multiple scenarios")
+    priority: str = Field(description="Critical, High, Medium, or Low")
+    story_points: int = Field(description="Fibonacci sequence: 1, 2, 3, 5, 8, 13")
+    category: str = Field(description="Category name")
+    notes: List[str] = Field(description="Technical and business notes")
+
+class UserStoriesResponse(BaseModel):
+    user_stories: List[UserStory] = Field(description="List of extracted user stories")
+
+class TestCase(BaseModel):
+    id: str = Field(description="TC_001")
+    title: str = Field(description="Descriptive title of the test case")
+    preconditions: List[str] = Field(description="List of preconditions")
+    test_data: List[str] = Field(description="List of test data requirements")
+    test_steps: List[str] = Field(description="List of test steps")
+    expected_results: List[str] = Field(description="List of expected results")
+    priority: str = Field(description="High, Medium, or Low")
+    attachments: List[str] = Field(description="List of any attachments or references needed")
+
+class TestCasesResponse(BaseModel):
+    test_cases: List[TestCase] = Field(description="List of designed test cases")
 
 def calculate_confidence_level(prompt: str, answer: str) -> float:
     try:
@@ -52,10 +65,13 @@ def calculate_confidence_level(prompt: str, answer: str) -> float:
 
 def calculate_match_percentage(answer: str, source_text: str) -> float:
     try:
+        # Cap source text length to prevent massive CPU spikes on large BRDs
+        capped_source = source_text[:30000]
         answer_clean = re.sub(r'[^\w\s]', '', answer.lower())
-        source_clean = re.sub(r'[^\w\s]', '', source_text.lower())
+        source_clean = re.sub(r'[^\w\s]', '', capped_source.lower())
         
-        vectorizer = TfidfVectorizer(stop_words='english', max_features=1000, ngram_range=(1, 2))
+        # Use simple unigrams for faster processing
+        vectorizer = TfidfVectorizer(stop_words='english', max_features=1000)
         tfidf_matrix = vectorizer.fit_transform([source_clean, answer_clean])
         match_score = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
         
@@ -125,10 +141,15 @@ CRITICAL INSTRUCTION: Extract EVERY POSSIBLE user story from the BRD below. No r
 - "Medium": Secondary features, enhancements
 - "Low": Nice-to-have, future considerations
 
-**Story Sizing Guidance**:
-- Break complex features into multiple smaller stories
-- Each story should be completable in 1-3 days
-- Use vertical slicing (end-to-end functionality)
+**Story Sizing Guidance & Point Calculation (STRICT)**:
+- MUST use the Fibonacci sequence: 1, 2, 3, 5, 8, 13
+- 1 Point: Simple UI change, static text, or minor configuration (0-1 acceptance criteria).
+- 2 Points: Simple feature, minimal logic, no backend changes (1-2 acceptance criteria).
+- 3 Points: Standard CRUD operation, basic validation, single table database changes (3-4 acceptance criteria).
+- 5 Points: Complex business logic, cross-module impacts, external API integrations, advanced error handling (5-6 acceptance criteria).
+- 8 Points: Major architectural changes, highly complex algorithms, third-party system integrations requiring orchestration (>6 acceptance criteria).
+- 13 Points: Epic-level feature (MUST be broken down into smaller stories if possible).
+- Break complex features into multiple smaller stories using vertical slicing.
 
 ### PHASE 3: Quality Checks
 
@@ -149,34 +170,7 @@ CRITICAL INSTRUCTION: Extract EVERY POSSIBLE user story from the BRD below. No r
 
 ### OUTPUT REQUIREMENTS:
 
-Return ONLY valid JSON (no markdown, no explanations):
-
-{{
-  "user_stories": [
-    {{
-      "id": "US_001",
-      "title": "[Specific, searchable title from BRD content]",
-      "story": "As a [specific role from BRD], I want [specific feature from BRD] so that [specific value from BRD]",
-      "acceptance_criteria": [
-        "Given [specific context from BRD], when [specific action], then [specific outcome with data/thresholds]",
-        "Given [error scenario], when [invalid action], then [error handling from BRD]",
-        "Given [edge case], when [boundary condition], then [expected behavior]",
-        "Given [business rule from BRD], when [rule trigger], then [rule enforcement]",
-        "Given [performance requirement], when [load condition], then [performance metric]"
-      ],
-      "priority": "[Critical/High/Medium/Low]",
-      "story_points": [1-13],
-      "category": "[category_name]",
-      "notes": [
-        "Affected users: [specific roles from BRD]",
-        "Related module: [specific module/component from BRD]",
-        "Dependencies: [specific systems/features from BRD]",
-        "Data entities: [specific entities from BRD]",
-        "Business rules: [specific rules from BRD]"
-      ]
-    }}
-  ]
-}}
+Your output must exactly match the schema provided. You must be exhaustive and find EVERY requirement.
 
 IMPORTANT RULES:
 1. Generate AT LEAST 25-30 stories for a typical BRD
@@ -208,23 +202,7 @@ Provide professional, detailed, and well-structured test cases based on the foll
 - Use **realistic and meaningful** test data.
 
 ### Output Format:
-Respond in **valid JSON only** using the following structure.
-IMPORTANT: Do NOT include trailing commas before closing brackets or braces.
-
-{{
-  "test_cases": [
-    {{
-      "id": "TC_001",
-      "title": "Generate a descriptive title",
-      "preconditions": ["Precondition 1", "Precondition 2"],
-      "test_data": ["data_field_1: value_1"],
-      "test_steps": ["1. Step description"],
-      "expected_results": ["Expected result"],
-      "priority": "High",
-      "attachments": []
-    }}
-  ]
-}}
+Your output must exactly match the schema provided. Generate as many test cases as needed to cover all scenarios.
 """
 
 CUCUMBER_PROMPT = """
@@ -363,12 +341,17 @@ def generate_artifact(task_type: str, document_id: str, input_text: str = None) 
     llm = initialize_llm()
     start_time = time.time()
     
+    schema = None
     if task_type == "user_stories":
-        context = query_vector_store(document_id, "Find all functional and non-functional requirements, business rules, and user workflows.", n_results=10)
+        # Retrieve a large number of chunks (e.g. 100) to ensure the LLM sees the ENTIRE document 
+        # (up to ~120k chars) rather than just a small semantic sample. This guarantees exhaustive extraction.
+        context = query_vector_store(document_id, "Find all functional and non-functional requirements, business rules, and user workflows.", n_results=100)
         prompt = USER_STORY_PROMPT.format(context=context)
+        schema = UserStoriesResponse
     elif task_type == "test_cases":
         prompt = TEST_CASE_PROMPT.format(input_text=input_text)
         context = input_text
+        schema = TestCasesResponse
     elif task_type == "cucumber":
         prompt = CUCUMBER_PROMPT.format(input_text=input_text)
         context = input_text
@@ -378,11 +361,19 @@ def generate_artifact(task_type: str, document_id: str, input_text: str = None) 
     else:
         raise ValueError("Invalid task type")
 
-    response = llm.invoke(prompt)
-    result_text = response.content
+    if schema:
+        structured_llm = llm.with_structured_output(schema)
+        response_obj = structured_llm.invoke(prompt)
+        parsed = response_obj.model_dump()
+        result_text = json.dumps(parsed)
+        parse_error = None
+    else:
+        response = llm.invoke(prompt)
+        result_text = response.content
+        parsed = result_text
+        parse_error = None
+        
     processing_time = time.time() - start_time
-    
-    parsed, parse_error = parse_json_output(result_text) if task_type in ["user_stories", "test_cases"] else (result_text, None)
     
     confidence_score = calculate_confidence_level(prompt, result_text)
     match_score = calculate_match_percentage(result_text, context)
