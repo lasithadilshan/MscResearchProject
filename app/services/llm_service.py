@@ -43,10 +43,12 @@ class TestCase(BaseModel):
 class TestCasesResponse(BaseModel):
     test_cases: List[TestCase] = Field(description="List of designed test cases")
 
+PUNCTUATION_REGEX = r'[^\w\s]'
+
 def calculate_confidence_level(prompt: str, answer: str) -> float:
     try:
-        prompt_clean = re.sub(r'[^\w\s]', '', prompt.lower())
-        answer_clean = re.sub(r'[^\w\s]', '', answer.lower())
+        prompt_clean = re.sub(PUNCTUATION_REGEX, '', prompt.lower())
+        answer_clean = re.sub(PUNCTUATION_REGEX, '', answer.lower())
         
         prompt_keywords = set(prompt_clean.split())
         answer_words = set(answer_clean.split())
@@ -67,8 +69,8 @@ def calculate_match_percentage(answer: str, source_text: str) -> float:
     try:
         # Cap source text length to prevent massive CPU spikes on large BRDs
         capped_source = source_text[:30000]
-        answer_clean = re.sub(r'[^\w\s]', '', answer.lower())
-        source_clean = re.sub(r'[^\w\s]', '', capped_source.lower())
+        answer_clean = re.sub(PUNCTUATION_REGEX, '', answer.lower())
+        source_clean = re.sub(PUNCTUATION_REGEX, '', capped_source.lower())
         
         # Use simple unigrams for faster processing
         vectorizer = TfidfVectorizer(stop_words='english', max_features=1000)

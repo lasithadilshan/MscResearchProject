@@ -59,7 +59,7 @@ def get_job_status(job_id: str, db: Session = Depends(get_db), current_user: Use
     if job.result:
         try:
             result_data = json.loads(job.result)
-        except:
+        except Exception:
             result_data = {"raw": job.result}
             
     return JobResult(status=job.status, result=result_data)
