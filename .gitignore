@@ -66,3 +66,10 @@ docker-compose.override.yml
 *.tmp
 
 vector_stores/
+# Databases
+*.db
+*.sqlite3
+
+# ChromaDB
+chroma_db/
+

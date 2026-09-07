@@ -10,8 +10,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 def initialize_llm():
     return ChatOpenAI(
-        model="gpt-4",
-        temperature=0.5,
+        model="gpt-4o",
+        temperature=0.7,
         openai_api_key=settings.OPENAI_API_KEY
     )
 
@@ -71,15 +71,18 @@ def get_confidence_category(percentage: float):
 
 # Prompt constants
 USER_STORY_PROMPT = """
-You are an Expert Business Analyst. Extract EVERY POSSIBLE user story from the document below.
+You are an Expert Business Analyst. Your responsibility is to read the entire Business Requirement Document (BRD) below and convert it into detailed User Stories.
+
+Think step-by-step and ensure you extract EVERY POSSIBLE user story derived from the BRD.
+DO NOT summarize or skip any functionality. Provide fully complete User Stories only.
 
 ## DOCUMENT:
 {context}
 
 Return ONLY valid JSON (no markdown, no explanations):
-{
+{{
   "user_stories": [
-    {
+    {{
       "id": "US_001",
       "title": "[Title]",
       "story": "As a [role], I want [feature] so that [value]",
@@ -88,9 +91,9 @@ Return ONLY valid JSON (no markdown, no explanations):
       "story_points": 5,
       "category": "Core",
       "notes": []
-    }
+    }}
   ]
-}
+}}
 """
 
 TEST_CASE_PROMPT = """
@@ -100,9 +103,9 @@ You are a Senior QA Engineer. Design a comprehensive test suite for the followin
 {input_text}
 
 Return ONLY valid JSON (no markdown):
-{
+{{
   "test_cases": [
-    {
+    {{
       "id": "TC_001",
       "title": "Title",
       "preconditions": ["Precondition"],
@@ -111,9 +114,9 @@ Return ONLY valid JSON (no markdown):
       "expected_results": ["Result"],
       "priority": "High",
       "attachments": []
-    }
+    }}
   ]
-}
+}}
 """
 
 CUCUMBER_PROMPT = """
