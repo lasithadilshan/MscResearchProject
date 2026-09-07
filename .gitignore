@@ -73,3 +73,7 @@ vector_stores/
 # ChromaDB
 chroma_db/
 
+# SonarQube
+.scannerwork/
+.sonar/
+
