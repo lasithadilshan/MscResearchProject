@@ -59,7 +59,13 @@ def extract_text_from_file(file_content: bytes, filename: str) -> str:
     if file_ext == ".docx":
         return _extract_docx(file_content)
     if file_ext == ".txt":
-        return file_content.decode("utf-8")
+        try:
+            return file_content.decode("utf-8")
+        except UnicodeDecodeError:
+            try:
+                return file_content.decode("latin-1")
+            except Exception:
+                return file_content.decode("utf-8", errors="replace")
     if file_ext in [".xlsx", ".xls"]:
         return _extract_excel(file_content)
     if file_ext in [".pptx", ".ppt"]:

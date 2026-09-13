@@ -40,6 +40,8 @@ async def upload_document(
         db.refresh(new_doc)
         
         return new_doc
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
